@@ -1,0 +1,36 @@
+# Modèles d'e-mails Auth — généré par scripts/generer-emails.mjs
+project_id = "hopital-mm"
+
+[auth.email.template.confirmation]
+subject = "Confirmez votre adresse e-mail — Hôpital M&M"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Réinitialisez votre mot de passe — Hôpital M&M"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.magic_link]
+subject = "Votre lien de connexion — Hôpital M&M"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.invite]
+subject = "Vous êtes invité à rejoindre l'Hôpital M&M"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.email_change]
+subject = "Confirmez votre nouvelle adresse e-mail — Hôpital M&M"
+content_path = "./supabase/templates/email_change.html"
+
+[auth.email.template.reauthentication]
+subject = "Votre code de vérification : {{ .Token }}"
+content_path = "./supabase/templates/reauthentication.html"
+
+[auth.email.notification.password_changed]
+enabled = true
+subject = "Votre mot de passe a été modifié — Hôpital M&M"
+content_path = "./supabase/templates/password_changed_notification.html"
+
+[auth.email.notification.email_changed]
+enabled = true
+subject = "Votre adresse e-mail a été modifiée — Hôpital M&M"
+content_path = "./supabase/templates/email_changed_notification.html"

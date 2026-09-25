@@ -5,6 +5,7 @@ import Accueil from './pages/Accueil.jsx'
 import Connexion from './pages/Connexion.jsx'
 import Inscription from './pages/Inscription.jsx'
 import LierDossier from './pages/LierDossier.jsx'
+import NouveauMotDePasse from './pages/NouveauMotDePasse.jsx'
 import EspacePatient from './pages/EspacePatient.jsx'
 import EspaceInfirmier from './pages/EspaceInfirmier.jsx'
 import EspaceMedecin from './pages/medecin/EspaceMedecin.jsx'
@@ -35,6 +36,7 @@ export default function App() {
       <Route path="/" element={<Accueil />} />
       <Route path="/connexion" element={<Connexion />} />
       <Route path="/inscription" element={<Inscription />} />
+      <Route path="/nouveau-mot-de-passe" element={<NouveauMotDePasse />} />
       <Route path="/patient/lier" element={<Protege roles={['compte']}><LierDossier /></Protege>} />
       <Route path="/patient" element={<Protege roles={['patient']}><EspacePatient /></Protege>} />
       <Route path="/infirmier" element={<Protege roles={['infirmier']}><EspaceInfirmier /></Protege>} />

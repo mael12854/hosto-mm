@@ -25,7 +25,7 @@ export default function Connexion() {
 
   const oubli = async () => {
     if (!email.trim()) { setMsg({ alerte: 'Saisissez d\'abord votre adresse e-mail.' }); return }
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin + '/connexion' })
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin + '/nouveau-mot-de-passe' })
     setMsg(error ? { alerte: messageErreur(error) } : { succes: 'Un e-mail de réinitialisation vient de vous être envoyé.' })
   }
 

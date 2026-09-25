@@ -32,9 +32,16 @@ npm run build          # version de production dans dist/
 
 ## Déploiement
 
-Site statique (Vite + React). Netlify : `public/_redirects` ; Vercel : `vercel.json`.
-Commande de build `npm run build`, dossier publié `dist`.
-Variables d'environnement : `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`.
+Site statique (Vite + React). Commande de build `npm run build`, dossier publié `dist`.
+
+- **Vercel** : `vercel.json` contient déjà la configuration (Vite, `dist`, redirections) et les variables
+  `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` (valeurs publiques). Importer le dépôt suffit.
+- **Netlify** : `public/_redirects` ; ajouter les deux variables dans les réglages du site.
+
+## E-mails
+
+Les e-mails de compte (création, mot de passe oublié…) passent par Supabase Auth et le relais SMTP de Brevo,
+avec les modèles aux couleurs de l'hôpital : voir [`supabase/templates/LISEZMOI.md`](supabase/templates/LISEZMOI.md).
 
 ## Organisation du code
 

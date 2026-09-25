@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Réinitialisez votre mot de passe — Hôpital M&amp;M</title>
+</head>
+<body style="margin:0;padding:0;background:#E7E2D8;font-family:'Source Sans 3', 'Segoe UI', Helvetica, Arial, sans-serif;color:#48525A">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#E7E2D8" style="background:#E7E2D8">
+  <tr><td align="center" style="padding:32px 16px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
+      <tr><td style="padding:0 0 20px">
+        <a href="{{ .SiteURL }}" style="text-decoration:none"><img src="{{ .SiteURL }}/email/logo.png" width="220" height="40" alt="Hôpital M&amp;M" style="display:block;border:0;width:220px;height:auto;font-family:'Source Sans 3', 'Segoe UI', Helvetica, Arial, sans-serif;font-size:22px;font-weight:700;color:#1D5C74"></a>
+      </td></tr>
+      <tr><td bgcolor="#FFFFFF" style="background:#FFFFFF;border:1px solid #D8D2C6;border-top:3px solid #1D5C74;padding:30px 28px">
+        <p style="margin:0 0 10px;font-family:'IBM Plex Mono', Menlo, Consolas, monospace;font-size:11px;letter-spacing:0.12em;color:#1D5C74">MOT DE PASSE</p>
+        <h1 style="margin:0 0 18px;font-family:'Source Sans 3', 'Segoe UI', Helvetica, Arial, sans-serif;font-size:24px;line-height:1.2;font-weight:700;color:#1E262B">Réinitialisez votre mot de passe</h1>
+        <p style="margin:0 0 14px;font-size:16px;line-height:1.55;color:#48525A">Une demande de nouveau mot de passe a été faite pour le compte <strong style="color:#1E262B">{{ .Email }}</strong>. Le lien est valable une heure.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 4px">
+  <tr><td bgcolor="#1D5C74" style="background:#1D5C74">
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:13px 22px;font-family:'Source Sans 3', 'Segoe UI', Helvetica, Arial, sans-serif;font-size:15px;font-weight:600;color:#F4F1EA;text-decoration:none">Choisir un nouveau mot de passe</a>
+  </td></tr>
+</table>
+<p style="margin:18px 0 6px;font-family:'IBM Plex Mono', Menlo, Consolas, monospace;font-size:11px;letter-spacing:0.1em;color:#656C71">OU SAISISSEZ CE CODE</p>
+<p style="margin:0;font-family:'IBM Plex Mono', Menlo, Consolas, monospace;font-size:28px;letter-spacing:0.18em;color:#1E262B">{{ .Token }}</p>
+<p style="margin:18px 0 0;font-size:13px;line-height:1.5;color:#656C71">Le bouton ne fonctionne pas ? Copiez ce lien dans votre navigateur :<br>
+<a href="{{ .ConfirmationURL }}" style="color:#1D5C74;word-break:break-all">{{ .ConfirmationURL }}</a></p>
+      </td></tr>
+      <tr><td style="padding:18px 4px 0">
+        <p style="margin:0 0 10px;font-size:13px;line-height:1.5;color:#656C71">Vous n'avez rien demandé ? Ignorez cet e-mail : votre mot de passe actuel reste valable.</p>
+        <p style="margin:0;font-family:'IBM Plex Mono', Menlo, Consolas, monospace;font-size:11px;letter-spacing:0.06em;color:#656C71">HÔPITAL M&amp;M · L'HÔPITAL DE FAMILLE DE MAËL ET MARIN<br>QUESTIONS : DEMANDER À MAËL OU À MARIN</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

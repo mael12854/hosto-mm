@@ -1,1 +1,18 @@
-{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "build": {
+    "env": {
+      "VITE_SUPABASE_URL": "https://cdkktcwpzucdqmmvkoeh.supabase.co",
+      "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_nt5Q22LEEuRNt3RvUufqdA_oiLzHLOK"
+    }
+  },
+  "env": {
+    "VITE_SUPABASE_URL": "https://cdkktcwpzucdqmmvkoeh.supabase.co",
+    "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_nt5Q22LEEuRNt3RvUufqdA_oiLzHLOK"
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
