@@ -1,1 +1,55 @@
-# hosto-mm
+# Hôpital M&M
+
+Site de l'Hôpital M&M — l'hôpital de famille dirigé par Maël et Marin Domenech.
+Réalisé d'après la charte de marque v1.0 (Claude Design), en français, connecté à Supabase.
+
+## Espaces
+
+| Adresse | Pour qui | Contenu |
+| --- | --- | --- |
+| `/` | Tout le monde | Accueil public : l'hôpital, les espaces, infos pratiques |
+| `/connexion`, `/inscription` | Tout le monde | Connexion, création d'un compte patient |
+| `/medecin` | Médecins | Tableau de bord, Ordonnance, Compte-rendu, Entrée / Sortie, Bracelets, Scanner, Éditeur libre, Lits, Journal, Personnel, Statistiques |
+| `/infirmier` | Infirmiers | Saisie des constantes, administration des médicaments |
+| `/patient` | Patients | Dernière visite, rendez-vous, ordonnances, bulletins de sortie |
+
+Le rôle est déterminé à la connexion : une ligne dans `medecins`, `infirmiers` ou `patients.auth_id`.
+Un patient crée son compte puis le lie à son dossier (n° de dossier + date de naissance).
+Un membre du personnel ne voit que les patients des services auxquels il est rattaché (règles RLS).
+
+Chaque document (bulletin, ordonnance, compte-rendu, document libre) peut être imprimé, téléchargé
+en PDF ou envoyé par e-mail : le bouton ouvre la messagerie avec l'adresse du patient, l'objet et
+le texte du document déjà remplis (lien `mailto:`).
+
+## Démarrer
+
+```bash
+npm install
+cp .env.example .env   # URL et clé publiable du projet Supabase « hopital-mm »
+npm run dev            # http://localhost:5173
+npm run build          # version de production dans dist/
+```
+
+## Déploiement
+
+Site statique (Vite + React). Netlify : `public/_redirects` ; Vercel : `vercel.json`.
+Commande de build `npm run build`, dossier publié `dist`.
+Variables d'environnement : `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`.
+
+## Organisation du code
+
+- `src/index.css` — jetons de la charte (couleurs, typographie Source Sans 3 / IBM Plex Mono, angles droits)
+- `src/components/Logo.jsx` — logo et signe en SVG (couleur, blanc, anthracite)
+- `src/lib/` — client Supabase, session et rôles, patients, formats français, impression / PDF / e-mail, bracelets QR
+- `src/lib/medicaments.js` — répertoire de 432 médicaments `[nom, DCI, classe, forme]`
+- `src/pages/` — pages publiques, espaces patient et infirmier ; `src/pages/medecin/` — outils du médecin
+
+## Données Supabase
+
+| Outil | Table |
+| --- | --- |
+| Entrée / Sortie | `documents_officiels` |
+| Ordonnance | `prescriptions` (`contenu`, `lignes`, `pieces_jointes`) + stockage `pieces-jointes/<patient_id>/…` |
+| Compte-rendu, Éditeur libre | `comptes_rendus` (1re ligne = titre) |
+| Constantes, administrations | `constantes_vitales`, `administrations_medicament` |
+| Lits, Journal, Personnel | `lits`, `journal_activite`, `medecins` / `infirmiers` / `*_services` |
