@@ -75,7 +75,7 @@ button, input, select, textarea { font-family: inherit; }
 textarea.saisie { border-bottom: 1px solid var(--filet-fort); resize: vertical; }
 select.saisie { font-size: 15.5px; }
 .saisie.petite { font-size: 14px; padding: 7px 9px; }
-.grille-champs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 14px; }
+.grille-champs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 14px; align-items: end; }
 .grille-champs.large { grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
 
 /* ---------- Badges de statut ---------- */
@@ -160,3 +160,8 @@ select.saisie { font-size: 15.5px; }
   body { background: #fff; }
   .no-print { display: none !important; }
 }
+
+/* Champs date / heure natifs : calendrier du navigateur aux couleurs de la charte */
+input[type="date"].saisie, input[type="datetime-local"].saisie, input[type="time"].saisie { color-scheme: light; min-height: 46px; accent-color: var(--bleu); }
+input[type="date"].saisie::-webkit-calendar-picker-indicator,
+input[type="datetime-local"].saisie::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.75; }

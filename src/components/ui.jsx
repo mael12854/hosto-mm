@@ -27,6 +27,15 @@ export function Saisie({ label, valeur, onChange, mono, obligatoire, ...rest }) 
   )
 }
 
+/** Champ date (type="date") ou date + heure (type="datetime-local") avec calendrier du navigateur. */
+export function ChampDate({ label, valeur, onChange, type = 'date', obligatoire, ...rest }) {
+  return (
+    <Champ label={label} obligatoire={obligatoire}>
+      <input type={type} lang="fr" className="saisie mono" value={valeur ?? ''} onChange={e => onChange(e.target.value)} required={obligatoire} {...rest} />
+    </Champ>
+  )
+}
+
 export function ZoneTexte({ label, valeur, onChange, rows = 3, ...rest }) {
   return (
     <Champ label={label}>

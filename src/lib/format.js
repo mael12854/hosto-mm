@@ -20,13 +20,20 @@ export function dateCourte(d) {
   return isNaN(x) ? '' : x.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()
 }
 
-/** jj/mm/aaaa → aaaa-mm-jj (null si invalide) */
-export function versIso(t) {
-  const m = String(t || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
-  if (!m) return null
-  const [, j, mo, a] = m
-  const iso = `${a}-${mo.padStart(2, '0')}-${j.padStart(2, '0')}`
-  return isNaN(new Date(iso)) ? null : iso
+const deux = n => String(n).padStart(2, '0')
+
+/** Valeur d'un champ <input type="date"> (aaaa-mm-jj, heure locale). */
+export function valeurDate(d = new Date()) {
+  if (!d) return ''
+  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d
+  const x = new Date(d)
+  return isNaN(x) ? '' : `${x.getFullYear()}-${deux(x.getMonth() + 1)}-${deux(x.getDate())}`
+}
+
+/** Valeur d'un champ <input type="datetime-local"> (aaaa-mm-jjThh:mm, heure locale). */
+export function valeurDateHeure(d = new Date()) {
+  const x = new Date(d)
+  return isNaN(x) ? '' : `${valeurDate(x)}T${deux(x.getHours())}:${deux(x.getMinutes())}`
 }
 
 export const nombre = n => (n == null || n === '' ? '—' : String(n).replace('.', ','))

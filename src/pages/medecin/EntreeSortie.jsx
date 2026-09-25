@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Logo } from '../../components/Logo.jsx'
-import { EnTeteOutil, Message, SelecteurPatient, Saisie, ZoneTexte, Vide } from '../../components/ui.jsx'
+import { ChampDate, EnTeteOutil, Message, SelecteurPatient, Saisie, ZoneTexte, Vide } from '../../components/ui.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { usePatients } from '../../lib/patients.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
-import { aujourdhui, date, dateHeure, esc, nomMedecin, versIso } from '../../lib/format.js'
+import { aujourdhui, date, dateHeure, esc, nomMedecin, valeurDate } from '../../lib/format.js'
 import { enteteHtml, envoyerParEmail, imprimer, piedHtml, telechargerPdf } from '../../lib/impression.js'
 
 const VIDE = {
@@ -31,7 +31,7 @@ const SECTIONS = [
   ]],
 ]
 
-const depuisBase = d => ({ ...VIDE, ...Object.fromEntries(Object.keys(VIDE).map(k => [k, d[k] ?? ''])), date_entree: date(d.date_entree), date_sortie: date(d.date_sortie) })
+const depuisBase = d => ({ ...VIDE, ...Object.fromEntries(Object.keys(VIDE).map(k => [k, d[k] ?? ''])), date_entree: valeurDate(d.date_entree), date_sortie: valeurDate(d.date_sortie) })
 
 export default function EntreeSortie() {
   const { profil } = useAuth()
@@ -52,18 +52,16 @@ export default function EntreeSortie() {
   useEffect(() => {
     charger()
     setMsg({})
-    setF(patient ? { ...VIDE, date_entree: date(patient.sejour?.date_entree), antecedents_allergies: [patient.antecedents, patient.allergies && 'Allergies : ' + patient.allergies].filter(Boolean).join('\n') } : VIDE)
+    setF(patient ? { ...VIDE, date_entree: valeurDate(patient.sejour?.date_entree), antecedents_allergies: [patient.antecedents, patient.allergies && 'Allergies : ' + patient.allergies].filter(Boolean).join('\n') } : VIDE)
   }, [patient, charger])
 
   const enregistrer = async () => {
     if (!patient) return
-    for (const k of ['date_entree', 'date_sortie']) {
-      if (f[k] && !versIso(f[k])) { setMsg({ alerte: 'Date invalide : utilisez le format jj/mm/aaaa.' }); return }
-    }
+    if (f.date_entree && f.date_sortie && f.date_sortie < f.date_entree) { setMsg({ alerte: "La date de sortie ne peut pas précéder la date d'entrée." }); return }
     setEnvoi(true)
     const { error } = await supabase.from('documents_officiels').insert({
       ...f,
-      date_entree: versIso(f.date_entree), date_sortie: versIso(f.date_sortie),
+      date_entree: f.date_entree || null, date_sortie: f.date_sortie || null,
       patient_id: patient.id, service_id: patient.service_id,
       hospitalisation_id: patient.sejour?.id || null, medecin_id: profil.userId,
     })
@@ -75,7 +73,7 @@ export default function EntreeSortie() {
   }
 
   const corpsHtml = () => {
-    const bloc = (k, l) => `<div class="k">${esc(l)}</div><div class="v">${esc(f[k])}</div>`
+    const bloc = (k, l) => `<div class="k">${esc(l)}</div><div class="v">${esc(k.startsWith('date_') ? date(f[k]) : f[k])}</div>`
     return enteteHtml({ titre: 'Bulletin & Synthèse Entrée / Sortie', date: aujourdhui(), medecin, service: patient?.service, patient: patient?.nomComplet })
       + `<h3><b>1.</b>Dates &amp; Modalités du séjour</h3>${bloc('date_entree', "Date d'entrée (admission)")}${bloc('date_sortie', 'Date de sortie effective / prévue')}${bloc('mode_sortie', 'Mode de sortie')}`
       + SECTIONS.map(([titre, champs], i) => `<h3><b>${i + 2}.</b>${esc(titre)}</h3>${champs.map(([k, l]) => bloc(k, l)).join('')}`).join('')
@@ -86,7 +84,7 @@ export default function EntreeSortie() {
   const texteBrut = (d = f) => [
     'BULLETIN & SYNTHÈSE ENTRÉE / SORTIE — Hôpital M&M',
     `${aujourdhui()} · ${medecin} · ${patient?.service || ''}`, `Patient : ${patient?.nomComplet || ''}`, '',
-    `Date d'entrée : ${d.date_entree || '—'}`, `Date de sortie : ${d.date_sortie || '—'}`, `Mode de sortie : ${d.mode_sortie || '—'}`,
+    `Date d'entrée : ${date(d.date_entree) || '—'}`, `Date de sortie : ${date(d.date_sortie) || '—'}`, `Mode de sortie : ${d.mode_sortie || '—'}`,
     ...SECTIONS.flatMap(([t, champs], i) => ['', `${i + 2}. ${t.toUpperCase()}`, ...champs.filter(([k]) => d[k]).map(([k, l]) => `${l} :\n${d[k]}`)]),
   ].join('\n')
 
@@ -135,8 +133,8 @@ export default function EntreeSortie() {
         <div className="section-doc">
           <h5><span className="num">1.</span>Dates &amp; Modalités du séjour</h5>
           <div className="grille-champs">
-            <Saisie label="Date d'entrée (admission)" mono placeholder="jj/mm/aaaa" valeur={f.date_entree} onChange={maj('date_entree')} inputMode="numeric" />
-            <Saisie label="Date de sortie effective / prévue" mono placeholder="jj/mm/aaaa" valeur={f.date_sortie} onChange={maj('date_sortie')} inputMode="numeric" />
+            <ChampDate label="Date d'entrée (admission)" valeur={f.date_entree} onChange={maj('date_entree')} max={f.date_sortie || undefined} />
+            <ChampDate label="Date de sortie effective / prévue" valeur={f.date_sortie} onChange={maj('date_sortie')} min={f.date_entree || undefined} />
             <Saisie label="Mode de sortie" placeholder="ex: Domicile, Transfert, RAD..." valeur={f.mode_sortie} onChange={maj('mode_sortie')} />
           </div>
         </div>
