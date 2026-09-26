@@ -9,7 +9,7 @@ Réalisé d'après la charte de marque v1.0 (Claude Design), en français, conne
 | --- | --- | --- |
 | `/` | Tout le monde | Accueil public : l'hôpital, les espaces, infos pratiques |
 | `/connexion`, `/inscription` | Tout le monde | Connexion, création d'un compte patient |
-| `/medecin` | Médecins | Tableau de bord, Ordonnance, Compte-rendu, Entrée / Sortie, Rendez-vous, Bracelets, Scanner, Éditeur libre, Lits, Journal, Personnel, Statistiques |
+| `/medecin` | Médecins | Tableau de bord, Ordonnance, Compte-rendu, Admissions, Entrée / Sortie, Rendez-vous, Bracelets, Scanner, Éditeur libre, Lits, Journal, Personnel, Statistiques |
 | `/infirmier` | Infirmiers | Saisie des constantes, administration des médicaments |
 | `/patient` | Patients | Dernière visite, rendez-vous, ordonnances, bulletins de sortie |
 
@@ -55,6 +55,7 @@ avec les modèles aux couleurs de l'hôpital : voir [`supabase/templates/LISEZMO
 
 | Outil | Table |
 | --- | --- |
+| Admissions (entrée / sortie rapide) | `hospitalisations` (`date_entree`, `date_sortie`, triage), `patients` (nouveau dossier), `lits` |
 | Entrée / Sortie | `documents_officiels` |
 | Ordonnance | `prescriptions` (`contenu`, `lignes`, `pieces_jointes`) + stockage `pieces-jointes/<patient_id>/…` |
 | Compte-rendu | `comptes_rendus` (`contenu` lisible + `champs` : rubriques structurées) |
