@@ -27,7 +27,13 @@ export default function EspacePatient() {
 
   const medecin = id => nomMedecin(d?.med.find(m => m.id === id))
   const derniere = d && [...d.cr.map(x => ({ ...x, genre: 'cr' })), ...d.pr.map(x => ({ ...x, genre: 'pr' }))].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
-  const [titre, ...corps] = (derniere?.contenu || '').split('\n')
+  const [titreBrut, ...corpsBrut] = (derniere?.contenu || '').split('\n')
+  // Compte-rendu structuré : résumé lisible (motif, diagnostic, consignes, prochain rendez-vous).
+  const c = derniere?.champs
+  const titre = c ? `Consultation — ${c.motif}` : titreBrut
+  const corps = c
+    ? [c.diagnostic && `Conclusion : ${c.diagnostic}`, c.traitement && `Traitement : ${c.traitement}`, c.conduite && `Consignes : ${c.conduite}`, c.prochain_rdv && `Prochain rendez-vous : ${dateHeure(c.prochain_rdv)}`].filter(Boolean)
+    : corpsBrut
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--fond)' }}>

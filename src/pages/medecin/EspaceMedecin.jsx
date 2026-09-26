@@ -9,6 +9,7 @@ const OUTILS = [
   ['ordonnance', 'Ordonnance'],
   ['compte-rendu', 'Compte-rendu'],
   ['entree-sortie', 'Entrée / Sortie'],
+  ['rendez-vous', 'Rendez-vous'],
   ['bracelets', 'Bracelets'],
   ['scanner', 'Scanner'],
   ['editeur', 'Éditeur libre'],

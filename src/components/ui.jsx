@@ -36,9 +36,9 @@ export function ChampDate({ label, valeur, onChange, type = 'date', obligatoire,
   )
 }
 
-export function ZoneTexte({ label, valeur, onChange, rows = 3, ...rest }) {
+export function ZoneTexte({ label, valeur, onChange, rows = 3, obligatoire, ...rest }) {
   return (
-    <Champ label={label}>
+    <Champ label={label} obligatoire={obligatoire}>
       <textarea className="saisie" rows={rows} value={valeur ?? ''} onChange={e => onChange(e.target.value)} {...rest} />
     </Champ>
   )

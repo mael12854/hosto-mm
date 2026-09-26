@@ -23,7 +23,7 @@ export default function Redaction({ outil, intro, titreDefaut, modeles, placehol
 
   const charger = useCallback(async () => {
     if (!patient) { setListe([]); return }
-    const { data } = await supabase.from('comptes_rendus').select('*').eq('patient_id', patient.id).order('created_at', { ascending: false })
+    const { data } = await supabase.from('comptes_rendus').select('*').eq('patient_id', patient.id).is('champs', null).order('created_at', { ascending: false })
     setListe(data || [])
   }, [patient])
   useEffect(() => { charger(); setMsg({}) }, [charger])
