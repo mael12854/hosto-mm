@@ -14,6 +14,12 @@ export function dateHeure(d) {
   return isNaN(x) ? '' : x.toLocaleDateString('fr-FR') + ' · ' + x.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
+/** « 14:15 » */
+export function heure(d) {
+  const x = new Date(d)
+  return isNaN(x) ? '' : x.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+}
+
 /** « 14 SEPT. 2026 » */
 export function dateCourte(d) {
   const x = new Date(d)
