@@ -25,7 +25,10 @@ export default function Inscription() {
 
   return (
     <CadreAcces titre="Créer un compte patient" intro="Vous aurez besoin ensuite de votre numéro de dossier et de votre date de naissance."
-      pied={<>Déjà un compte ? <Link to="/connexion">Se connecter</Link></>}>
+      pied={<div style={{ display: 'grid', gap: 8 }}>
+        <span>Déjà un compte ? <Link to="/connexion">Se connecter</Link></span>
+        <span>Personnel soignant : créez aussi votre compte ici, puis un médecin vous nommera.</span>
+      </div>}>
       <form onSubmit={inscrire} style={{ display: 'grid', gap: 14 }}>
         <Champ label="Adresse e-mail"><input type="email" className="saisie" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} /></Champ>
         <Champ label="Mot de passe (6 caractères min.)"><input type="password" className="saisie" autoComplete="new-password" minLength={6} required value={mdp} onChange={e => setMdp(e.target.value)} /></Champ>

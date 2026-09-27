@@ -24,7 +24,10 @@ export default function LierDossier() {
 
   return (
     <CadreAcces titre="Lier mon dossier" intro="Saisissez le numéro de dossier inscrit sur votre bracelet et votre date de naissance."
-      pied={<button type="button" className="btn-lien bleu" onClick={async () => { await deconnexion(); nav('/') }}>DÉCONNEXION</button>}>
+      pied={<div style={{ display: 'grid', gap: 10 }}>
+        <p>Membre du personnel soignant ? Demandez à un médecin de vous nommer dans l'outil « Personnel », puis reconnectez-vous.</p>
+        <button type="button" className="btn-lien bleu" style={{ justifySelf: 'start' }} onClick={async () => { await deconnexion(); nav('/') }}>DÉCONNEXION</button>
+      </div>}>
       <form onSubmit={lier} style={{ display: 'grid', gap: 14 }}>
         <Champ label="N° de dossier"><input className="saisie mono" required placeholder="2026-0001" value={num} onChange={e => setNum(e.target.value)} /></Champ>
         <ChampDate label="Date de naissance" required valeur={naissance} onChange={setNaissance} max={valeurDate()} />
