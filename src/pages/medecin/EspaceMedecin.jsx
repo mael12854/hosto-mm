@@ -9,7 +9,7 @@ import { supabase } from '../../lib/supabase.js'
 // Menu groupé par thème : [titre du groupe, [[chemin, libellé]]].
 const GROUPES = [
   ['Accueil', [['', 'Tableau de bord'], ['messages', 'Messages']]],
-  ['Soins', [['admissions', 'Admissions'], ['rendez-vous', 'Rendez-vous'], ['examens', 'Examens']]],
+  ['Soins', [['file-attente', "File d'attente"], ['admissions', 'Admissions'], ['rendez-vous', 'Rendez-vous'], ['examens', 'Examens']]],
   ['Documents', [['ordonnance', 'Ordonnance'], ['compte-rendu', 'Compte-rendu'], ['entree-sortie', 'Entrée / Sortie'], ['editeur', 'Éditeur libre']]],
   ['Outils', [['bracelets', 'Bracelets'], ['scanner', 'Scanner'], ['lits', 'Lits']]],
   ['Gestion', [['journal', 'Journal'], ['personnel', 'Personnel'], ['statistiques', 'Statistiques']]],
