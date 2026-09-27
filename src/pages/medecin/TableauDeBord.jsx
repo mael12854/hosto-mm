@@ -135,6 +135,7 @@ export default function TableauDeBord() {
             {tries.map(p => (
               <CartePatient key={p.id} p={p} constante={constantes[p.id]}
                 action={<div className="rangee-btn">
+                  <Link to="/medecin/dossier" className="btn" onClick={() => choisir(p.id)}>Dossier</Link>
                   <Link to="/medecin/ordonnance" className="btn" onClick={() => choisir(p.id)}>Rédiger une ordonnance</Link>
                   <Link to="/medecin/entree-sortie" className="btn" onClick={() => choisir(p.id)}>Entrée / Sortie</Link>
                 </div>} />

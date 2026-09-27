@@ -17,6 +17,7 @@ import Admissions from './pages/medecin/Admissions.jsx'
 import Examens from './pages/medecin/Examens.jsx'
 import Messages from './pages/medecin/Messages.jsx'
 import FileUrgences from './pages/medecin/FileUrgences.jsx'
+import Dossier from './pages/medecin/Dossier.jsx'
 import EntreeSortie from './pages/medecin/EntreeSortie.jsx'
 import Bracelets from './pages/medecin/Bracelets.jsx'
 import Scanner from './pages/medecin/Scanner.jsx'
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="examens" element={<Examens />} />
         <Route path="messages" element={<Messages />} />
         <Route path="file-attente" element={<FileUrgences />} />
+        <Route path="dossier" element={<Dossier />} />
         <Route path="entree-sortie" element={<EntreeSortie />} />
         <Route path="admissions" element={<Admissions />} />
         <Route path="rendez-vous" element={<RendezVous />} />

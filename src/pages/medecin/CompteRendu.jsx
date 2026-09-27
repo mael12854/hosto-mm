@@ -194,7 +194,7 @@ export default function CompteRendu() {
             <h5><span className="num">{i + 1}.</span>{t}</h5>
             {i === 1 && (
               <div className="grille-champs" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))' }}>
-                {CONSTANTES.map(([k, l]) => <Saisie key={k} label={l} mono inputMode={k === 'tension' ? 'text' : 'decimal'} placeholder={k === 'tension' ? '12/8' : ''} valeur={f[k]} onChange={maj(k)} />)}
+                {CONSTANTES.map(([k, l]) => <Saisie key={k} label={l} mono inputMode={k === 'tension' ? 'text' : 'decimal'} placeholder={k === 'tension' ? '120/80' : ''} valeur={f[k]} onChange={maj(k)} />)}
               </div>
             )}
             {champs.map(([k, l, aide, lignes]) => lignes === 1

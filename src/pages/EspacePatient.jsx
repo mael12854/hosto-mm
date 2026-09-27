@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import EnTeteEspace from '../components/EnTeteEspace.jsx'
 import Conversation from '../components/Conversation.jsx'
+import CarnetSante from '../components/CarnetSante.jsx'
 import { Chargement, Vide } from '../components/ui.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { supabase } from '../lib/supabase.js'
@@ -84,6 +85,10 @@ export default function EspacePatient() {
                   <p style={{ fontSize: 14.5, color: 'var(--texte)', whiteSpace: 'pre-wrap' }}>{x.resultat}</p>
                 </div>
               ))}
+            </Bloc>
+
+            <Bloc titre="Mon carnet de santé">
+              <CarnetSante patient={p} />
             </Bloc>
 
             <Bloc titre="Mes ordonnances">
