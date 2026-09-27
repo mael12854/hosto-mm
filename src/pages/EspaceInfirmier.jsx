@@ -6,6 +6,7 @@ import { useAuth } from '../lib/auth.jsx'
 import { PatientsProvider, usePatients } from '../lib/patients.jsx'
 import { supabase, journaliser, messageErreur } from '../lib/supabase.js'
 import { dateHeure, nombre, nomComplet, valeurDateHeure } from '../lib/format.js'
+import { imprimerCarnet } from '../lib/carnet.js'
 
 const VIDE = { temperature: '', pouls: '', tension_systolique: '', tension_diastolique: '', saturation: '', poids: '', notes: '' }
 const num = v => (v === '' ? null : Number(String(v).replace(',', '.')))
@@ -66,7 +67,14 @@ function Soins() {
   return (
     <main style={{ maxWidth: 1120, margin: '0 auto', padding: 'clamp(18px,3vw,32px) 20px 72px', display: 'grid', gap: 22 }}>
       <div><h1 className="titre-outil">Soins</h1><p className="intro">Saisissez les constantes et consignez chaque médicament donné. On vérifie toujours le nom du patient à voix haute avant un soin.</p></div>
-      <SelecteurPatient>{patient && <BadgeSejour sejour={patient.sejour} />}</SelecteurPatient>
+      <SelecteurPatient>
+        {patient && (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <BadgeSejour sejour={patient.sejour} />
+            <button type="button" className="btn" onClick={() => imprimerCarnet(patient)}>Imprimer le carnet de santé</button>
+          </div>
+        )}
+      </SelecteurPatient>
       <Message type="succes">{msg.succes}</Message>
       <Message type="alerte">{msg.alerte}</Message>
       {patient && (
