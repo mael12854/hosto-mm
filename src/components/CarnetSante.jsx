@@ -77,7 +77,7 @@ export default function CarnetSante({ patient, editable = false, profil }) {
     <div style={{ display: 'grid', gap: 18 }}>
       <div className="rangee-btn">
         <button type="button" className="btn" onClick={() => imprimerCarnet(patient)}>Imprimer le carnet de santé</button>
-        <span style={{ fontSize: 13.5, color: 'var(--gris)', alignSelf: 'center' }}>Livret A5 : identité, allergies, croissance, vaccins, suivi et pages de notes.</span>
+        <span style={{ fontSize: 13.5, color: 'var(--gris)', alignSelf: 'center' }}>Carnet type A5 à remplir à la main : seule l'identité du patient est pré-remplie.</span>
       </div>
       <Message type="succes">{msg.succes}</Message>
       <Message type="alerte">{msg.alerte}</Message>
