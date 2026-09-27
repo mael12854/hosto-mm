@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { LogoMark, signeSvgTexte } from '../../components/Logo.jsx'
+import { LogoMark, signeInverseSvgTexte, signeSvgTexte } from '../../components/Logo.jsx'
 import { Champ, Chargement, EnTeteOutil, Message, Saisie } from '../../components/ui.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { usePatients } from '../../lib/patients.jsx'
@@ -23,9 +23,7 @@ function BadgePersonnel({ nom, fonction, services, soins }) {
 
 /** Badge 85 × 54 mm prêt à imprimer (une page par badge). */
 function imprimerBadge({ nom, fonction, services, soins }) {
-  const signe = soins
-    ? signeSvgTexte.replace(/#1D5C74/g, '#F4F1EA').replace(/#A8331F/g, '#1D5C74')
-    : signeSvgTexte
+  const signe = soins ? signeInverseSvgTexte : signeSvgTexte
   imprimer({
     titre: `Badge ${nom}`, page: '85mm 54mm', marge: '0',
     style: `body{margin:0;font-family:'Source Sans 3',sans-serif}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}

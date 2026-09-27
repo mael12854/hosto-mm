@@ -11,7 +11,7 @@ const GROUPES = [
   ['Accueil', [['', 'Tableau de bord'], ['dossier', 'Dossier patient'], ['messages', 'Messages']]],
   ['Soins', [['file-attente', "File d'attente"], ['admissions', 'Admissions'], ['rendez-vous', 'Rendez-vous'], ['examens', 'Examens']]],
   ['Documents', [['ordonnance', 'Ordonnance'], ['compte-rendu', 'Compte-rendu'], ['entree-sortie', 'Entrée / Sortie'], ['editeur', 'Éditeur libre']]],
-  ['Outils', [['bracelets', 'Bracelets'], ['scanner', 'Scanner'], ['lits', 'Lits']]],
+  ['Outils', [['bracelets', 'Bracelets'], ['scanner', 'Scanner'], ['affiches', 'Affiches'], ['lits', 'Lits']]],
   ['Gestion', [['journal', 'Journal'], ['personnel', 'Personnel'], ['statistiques', 'Statistiques']]],
 ]
 
