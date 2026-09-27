@@ -3,6 +3,7 @@ import Courbe from './Courbe.jsx'
 import { Chargement, ChampDate, Message, Saisie, Vide } from './ui.jsx'
 import { supabase, journaliser, messageErreur } from '../lib/supabase.js'
 import { date, nombre, valeurDate } from '../lib/format.js'
+import { imprimerCarnet } from '../lib/carnet.js'
 
 // Calendrier vaccinal français (suggestions).
 const VACCINS = [
@@ -74,6 +75,10 @@ export default function CarnetSante({ patient, editable = false, profil }) {
 
   return (
     <div style={{ display: 'grid', gap: 18 }}>
+      <div className="rangee-btn">
+        <button type="button" className="btn" onClick={() => imprimerCarnet(patient)}>Imprimer le carnet de santé</button>
+        <span style={{ fontSize: 13.5, color: 'var(--gris)', alignSelf: 'center' }}>Livret A5 : identité, allergies, croissance, vaccins, suivi et pages de notes.</span>
+      </div>
       <Message type="succes">{msg.succes}</Message>
       <Message type="alerte">{msg.alerte}</Message>
 
