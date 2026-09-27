@@ -1,29 +1,34 @@
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { LogoMark } from '../../components/Logo.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { PatientsProvider } from '../../lib/patients.jsx'
 import { nomMedecin } from '../../lib/format.js'
+import { supabase } from '../../lib/supabase.js'
 
-const OUTILS = [
-  ['', 'Tableau de bord'],
-  ['ordonnance', 'Ordonnance'],
-  ['compte-rendu', 'Compte-rendu'],
-  ['examens', 'Examens'],
-  ['admissions', 'Admissions'],
-  ['entree-sortie', 'Entrée / Sortie'],
-  ['rendez-vous', 'Rendez-vous'],
-  ['bracelets', 'Bracelets'],
-  ['scanner', 'Scanner'],
-  ['editeur', 'Éditeur libre'],
-  ['lits', 'Lits'],
-  ['journal', 'Journal'],
-  ['personnel', 'Personnel'],
-  ['statistiques', 'Statistiques'],
+// Menu groupé par thème : [titre du groupe, [[chemin, libellé]]].
+const GROUPES = [
+  ['Accueil', [['', 'Tableau de bord'], ['messages', 'Messages']]],
+  ['Soins', [['admissions', 'Admissions'], ['rendez-vous', 'Rendez-vous'], ['examens', 'Examens']]],
+  ['Documents', [['ordonnance', 'Ordonnance'], ['compte-rendu', 'Compte-rendu'], ['entree-sortie', 'Entrée / Sortie'], ['editeur', 'Éditeur libre']]],
+  ['Outils', [['bracelets', 'Bracelets'], ['scanner', 'Scanner'], ['lits', 'Lits']]],
+  ['Gestion', [['journal', 'Journal'], ['personnel', 'Personnel'], ['statistiques', 'Statistiques']]],
 ]
 
 export default function EspaceMedecin() {
   const { profil, deconnexion } = useAuth()
   const nav = useNavigate()
+  const [nonLus, setNonLus] = useState(0)
+
+  // Messages de patients non lus (pastille du menu), relus chaque minute.
+  useEffect(() => {
+    const compter = () => supabase.from('messages').select('id', { count: 'exact', head: true }).eq('expediteur', 'patient').eq('lu', false)
+      .then(({ count }) => setNonLus(count || 0))
+    compter()
+    const t = setInterval(compter, 60000)
+    return () => clearInterval(t)
+  }, [])
+
   return (
     <PatientsProvider>
       <div className="coque">
@@ -34,8 +39,15 @@ export default function EspaceMedecin() {
               <div><div className="nom">Hôpital M&amp;M</div><div className="espace">ESPACE MÉDECIN</div></div>
             </Link>
             <nav aria-label="Outils">
-              {OUTILS.map(([chemin, libelle]) => (
-                <NavLink key={chemin} to={chemin ? `/medecin/${chemin}` : '/medecin'} end={!chemin}>{libelle}</NavLink>
+              {GROUPES.map(([groupe, outils]) => (
+                <div key={groupe} className="groupe-menu">
+                  <div className="titre-groupe">{groupe}</div>
+                  {outils.map(([chemin, libelle]) => (
+                    <NavLink key={chemin} to={chemin ? `/medecin/${chemin}` : '/medecin'} end={!chemin}>
+                      {libelle}{chemin === 'messages' && nonLus > 0 && <span className="pastille" aria-label={`${nonLus} non lus`}>{nonLus}</span>}
+                    </NavLink>
+                  ))}
+                </div>
               ))}
             </nav>
             <div className="bas">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import EnTeteEspace from '../components/EnTeteEspace.jsx'
+import Conversation from '../components/Conversation.jsx'
 import { Chargement, Vide } from '../components/ui.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { supabase } from '../lib/supabase.js'
@@ -58,6 +59,10 @@ export default function EspacePatient() {
                   </div>
                 </div>
               )}
+            </Bloc>
+
+            <Bloc titre="Mes messages avec l'équipe médicale">
+              <Conversation patientId={p.id} moi="patient" nomAutre="Hôpital M&M" />
             </Bloc>
 
             <Bloc titre="Mes prochains rendez-vous">

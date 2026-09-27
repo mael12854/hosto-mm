@@ -165,3 +165,19 @@ select.saisie { font-size: 15.5px; }
 input[type="date"].saisie, input[type="datetime-local"].saisie, input[type="time"].saisie { color-scheme: light; min-height: 46px; accent-color: var(--bleu); }
 input[type="date"].saisie::-webkit-calendar-picker-indicator,
 input[type="datetime-local"].saisie::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.75; }
+
+/* Messagerie : liste des conversations + fil */
+.messagerie { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 760px) { .messagerie { grid-template-columns: minmax(0, 1fr); } }
+.pastille { font-family: var(--mono); font-size: 11px; background: var(--rouge); color: #fff; padding: 1px 7px; margin-left: 8px; }
+
+/* Menu groupé */
+.groupe-menu { display: flex; flex-direction: column; }
+.groupe-menu + .groupe-menu { margin-top: 10px; }
+.titre-groupe { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bleu-pale); opacity: 0.8; padding: 4px 18px; }
+.barre nav a { padding-top: 7px; padding-bottom: 7px; }
+@media (max-width: 760px) {
+  .groupe-menu { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .groupe-menu + .groupe-menu { margin-top: 0; }
+  .titre-groupe { width: 100%; padding: 6px 12px 0; }
+}
