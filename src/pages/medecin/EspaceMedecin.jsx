@@ -8,6 +8,7 @@ const OUTILS = [
   ['', 'Tableau de bord'],
   ['ordonnance', 'Ordonnance'],
   ['compte-rendu', 'Compte-rendu'],
+  ['examens', 'Examens'],
   ['admissions', 'Admissions'],
   ['entree-sortie', 'Entrée / Sortie'],
   ['rendez-vous', 'Rendez-vous'],

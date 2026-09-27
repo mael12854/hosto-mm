@@ -21,8 +21,9 @@ export default function EspacePatient() {
       q('prescriptions').order('created_at', { ascending: false }),
       q('documents_officiels').order('created_at', { ascending: false }),
       q('rendez_vous').gte('date_heure', new Date().toISOString()).order('date_heure'),
+      q('examens_laboratoire').eq('statut', 'disponible').order('date_resultat', { ascending: false }),
       supabase.from('medecins').select('id, nom, prenom'),
-    ]).then(([cr, pr, doc, rdv, med]) => setD({ cr: cr.data || [], pr: pr.data || [], doc: doc.data || [], rdv: rdv.data || [], med: med.data || [] }))
+    ]).then(([cr, pr, doc, rdv, ex, med]) => setD({ cr: cr.data || [], pr: pr.data || [], doc: doc.data || [], rdv: rdv.data || [], ex: ex.data || [], med: med.data || [] }))
   }, [p.id])
 
   const medecin = id => nomMedecin(d?.med.find(m => m.id === id))
@@ -64,6 +65,18 @@ export default function EspacePatient() {
                 <div key={r.id} className="ligne-liste">
                   <span style={{ fontSize: 14.5, color: 'var(--encre)' }}>{r.motif || 'Consultation'}</span>
                   <span className="mono" style={{ fontSize: 12, color: 'var(--bleu)' }}>{dateHeure(r.date_heure)}</span>
+                </div>
+              ))}
+            </Bloc>
+
+            <Bloc titre="Mes résultats d'examens">
+              {!d.ex.length ? <Vide>Aucun résultat disponible.</Vide> : d.ex.map(x => (
+                <div key={x.id} style={{ background: '#fff', border: '1px solid var(--filet)', borderLeft: '4px solid var(--vert)', padding: '11px 13px', display: 'grid', gap: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                    <span style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--encre)' }}>{x.type_examen}</span>
+                    <span className="mono" style={{ fontSize: 11.5, color: 'var(--gris)' }}>{date(x.date_resultat)}</span>
+                  </div>
+                  <p style={{ fontSize: 14.5, color: 'var(--texte)', whiteSpace: 'pre-wrap' }}>{x.resultat}</p>
                 </div>
               ))}
             </Bloc>

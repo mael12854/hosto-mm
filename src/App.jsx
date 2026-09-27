@@ -14,6 +14,7 @@ import Ordonnance from './pages/medecin/Ordonnance.jsx'
 import CompteRendu from './pages/medecin/CompteRendu.jsx'
 import RendezVous from './pages/medecin/RendezVous.jsx'
 import Admissions from './pages/medecin/Admissions.jsx'
+import Examens from './pages/medecin/Examens.jsx'
 import EntreeSortie from './pages/medecin/EntreeSortie.jsx'
 import Bracelets from './pages/medecin/Bracelets.jsx'
 import Scanner from './pages/medecin/Scanner.jsx'
@@ -46,6 +47,7 @@ export default function App() {
         <Route index element={<TableauDeBord />} />
         <Route path="ordonnance" element={<Ordonnance />} />
         <Route path="compte-rendu" element={<CompteRendu />} />
+        <Route path="examens" element={<Examens />} />
         <Route path="entree-sortie" element={<EntreeSortie />} />
         <Route path="admissions" element={<Admissions />} />
         <Route path="rendez-vous" element={<RendezVous />} />
