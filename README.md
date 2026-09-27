@@ -9,7 +9,7 @@ Réalisé d'après la charte de marque v1.0 (Claude Design), en français, conne
 | --- | --- | --- |
 | `/` | Tout le monde | Accueil public : l'hôpital, les espaces, infos pratiques |
 | `/connexion`, `/inscription` | Tout le monde | Connexion, création d'un compte patient |
-| `/medecin` | Médecins | Tableau de bord, Ordonnance, Compte-rendu, Admissions, Entrée / Sortie, Rendez-vous, Bracelets, Scanner, Éditeur libre, Lits, Journal, Personnel, Statistiques |
+| `/medecin` | Médecins | Tableau de bord, Dossier patient, Messages, File d'attente, Admissions, Rendez-vous, Examens, Ordonnance, Compte-rendu, Entrée / Sortie, Éditeur libre, Bracelets, Scanner, Affiches, Scanner, Éditeur libre, Lits, Journal, Personnel, Statistiques |
 | `/infirmier` | Infirmiers | Saisie des constantes, administration des médicaments |
 | `/patient` | Patients | Dernière visite, rendez-vous, ordonnances, bulletins de sortie |
 
@@ -62,4 +62,10 @@ avec les modèles aux couleurs de l'hôpital : voir [`supabase/templates/LISEZMO
 | Éditeur libre | `comptes_rendus` (1re ligne = titre, `champs` vide) |
 | Rendez-vous | `rendez_vous` (date et heure, motif, statut prévu / terminé / annulé) |
 | Constantes, administrations | `constantes_vitales`, `administrations_medicament` |
+| Examens | `examens_laboratoire` (demandé → en cours → disponible) |
+| Messages | `messages` + fonction `marquer_messages_lus` |
+| File d'attente | `hospitalisations.statut_triage`, `niveau_urgence` |
+| Carnet de santé | `mesures_croissance`, `vaccinations` |
+| Rappels de rendez-vous | fonction Edge `rappels-rendez-vous` + tâche pg_cron (voir `supabase/templates/LISEZMOI.md`) |
+| Nomination du personnel | fonction `nommer_personnel` (réservée aux médecins) |
 | Lits, Journal, Personnel | `lits`, `journal_activite`, `medecins` / `infirmiers` / `*_services` |
