@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import ChampAdresse from '../../components/ChampAdresse.jsx'
+import { SectionContact, SectionCoordonnees, nettoyer, verifierCoordonnees } from '../../components/ChampsCoordonnees.jsx'
 import { Champ, ChampDate, EnTeteOutil, Message, Saisie, ZoneTexte } from '../../components/ui.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { creerDossier, usePatients } from '../../lib/patients.jsx'
@@ -8,7 +8,6 @@ import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { valeurDate } from '../../lib/format.js'
 
 const GROUPES_SANGUINS = ['A+', 'A−', 'B+', 'B−', 'AB+', 'AB−', 'O+', 'O−']
-const LIENS = ['Mère', 'Père', 'Frère', 'Sœur', 'Grand-mère', 'Grand-père', 'Tuteur / tutrice', 'Conjoint(e)', 'Ami(e)']
 const VIDE = {
   prenom: '', nom: '', date_naissance: '', lieu_naissance: '', sexe: '',
   adresse: '', complement_adresse: '', code_postal: '', ville: '', telephone: '', email: '',
@@ -16,7 +15,6 @@ const VIDE = {
   groupe_sanguin: '', allergies: '', antecedents: '', traitement_en_cours: '', medecin_traitant: '',
   service_id: '', num_chambre: '',
 }
-const telValide = t => !t.trim() || /^[+\d][\d\s.-]{7,}$/.test(t.trim())
 
 export default function NouveauPatient() {
   const { profil } = useAuth()
@@ -46,13 +44,12 @@ export default function NouveauPatient() {
     setMsg({})
     if (!f.prenom.trim() || !f.nom.trim()) { setMsg({ alerte: 'Indiquez au moins le prénom et le nom.' }); return }
     if (!f.service_id) { setMsg({ alerte: 'Choisissez le service de rattachement.' }); return }
-    if (!telValide(f.telephone) || !telValide(f.contact_urgence_telephone)) { setMsg({ alerte: 'Numéro de téléphone incomplet (ex. 06 12 34 56 78).' }); return }
-    if (f.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) { setMsg({ alerte: 'Adresse e-mail invalide.' }); return }
+    const invalide = verifierCoordonnees(f)
+    if (invalide) { setMsg({ alerte: invalide }); return }
     setEnvoi(true)
     try {
-      const champs = Object.fromEntries(Object.entries(f).map(([k, v]) => [k, typeof v === 'string' ? (v.trim() || null) : v]))
+      const champs = nettoyer(f)
       champs.nom = champs.nom.toUpperCase()
-      if (champs.ville) champs.ville = champs.ville.toUpperCase()
       const patient = await creerDossier(patients, champs)
       journaliser(profil, `Dossier créé : ${patient.prenom} ${patient.nom} (${patient.numero_dossier})`, { patient_id: patient.id, service_id: patient.service_id })
       await charger()
@@ -108,29 +105,12 @@ export default function NouveauPatient() {
 
         <section className="section-form">
           <h2>Coordonnées</h2>
-          <ChampAdresse valeur={f.adresse} onChange={maj('adresse')}
-            onChoisir={a => setF(x => ({ ...x, adresse: a.adresse, code_postal: a.code_postal, ville: a.ville.toUpperCase() }))} />
-          <div className="grille-champs">
-            <Saisie label="Complément" placeholder="Bâtiment, étage, appartement…" valeur={f.complement_adresse} onChange={maj('complement_adresse')} />
-            <Saisie label="Code postal" mono inputMode="numeric" maxLength={5} valeur={f.code_postal} onChange={v => maj('code_postal')(v.replace(/\D/g, ''))} />
-            <Saisie label="Ville" valeur={f.ville} onChange={maj('ville')} />
-          </div>
-          <div className="grille-champs">
-            <Saisie label="Téléphone" mono type="tel" inputMode="tel" placeholder="06 12 34 56 78" valeur={f.telephone} onChange={maj('telephone')} />
-            <Saisie label="E-mail" type="email" inputMode="email" placeholder="prenom@exemple.fr" valeur={f.email} onChange={maj('email')} />
-          </div>
+          <SectionCoordonnees f={f} maj={maj} setF={setF} />
         </section>
 
         <section className="section-form">
           <h2>Personne à prévenir</h2>
-          <div className="grille-champs">
-            <Saisie label="Nom et prénom" valeur={f.contact_urgence_nom} onChange={maj('contact_urgence_nom')} />
-            <Champ label="Lien">
-              <input className="saisie" list="liens-contact" value={f.contact_urgence_lien} onChange={e => maj('contact_urgence_lien')(e.target.value)} placeholder="Mère, père…" />
-              <datalist id="liens-contact">{LIENS.map(l => <option key={l} value={l} />)}</datalist>
-            </Champ>
-            <Saisie label="Téléphone" mono type="tel" inputMode="tel" placeholder="06 12 34 56 78" valeur={f.contact_urgence_telephone} onChange={maj('contact_urgence_telephone')} />
-          </div>
+          <SectionContact f={f} maj={maj} />
         </section>
 
         <section className="section-form">

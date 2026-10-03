@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import CarnetSante from '../../components/CarnetSante.jsx'
 import Courbe from '../../components/Courbe.jsx'
-import { BadgeSejour, Chargement, EnTeteOutil, SelecteurPatient, Vide } from '../../components/ui.jsx'
+import { CHAMPS_COORDONNEES, SectionContact, SectionCoordonnees, SectionSuivi, nettoyer, verifierCoordonnees } from '../../components/ChampsCoordonnees.jsx'
+import { BadgeSejour, Chargement, EnTeteOutil, Message, SelecteurPatient, Vide } from '../../components/ui.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { usePatients } from '../../lib/patients.jsx'
-import { supabase } from '../../lib/supabase.js'
+import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { date, dateHeure, nomComplet, nomMedecin } from '../../lib/format.js'
 
 const ONGLETS = ['Résumé', 'Constantes', 'Médicaments donnés', 'Documents', 'Examens', 'Rendez-vous', 'Carnet de santé']
@@ -22,23 +23,74 @@ function Ligne({ titre, meta, children }) {
   )
 }
 
-/** Coordonnées, personne à prévenir et suivi : uniquement les rubriques renseignées. */
+const versFormulaire = p => Object.fromEntries(CHAMPS_COORDONNEES.map(k => [k, p[k] ?? '']))
+
+/** Coordonnées, personne à prévenir et suivi, avec modification sur place. */
 function Coordonnees({ p }) {
+  const { profil } = useAuth()
+  const { charger } = usePatients()
+  const [f, setF] = useState(null)
+  const [msg, setMsg] = useState({})
+  const [envoi, setEnvoi] = useState(false)
+  const maj = k => v => setF(x => ({ ...x, [k]: v }))
+  useEffect(() => { setF(null); setMsg({}) }, [p.id])
+
+  const enregistrer = async e => {
+    e.preventDefault()
+    const invalide = verifierCoordonnees(f)
+    if (invalide) { setMsg({ alerte: invalide }); return }
+    setEnvoi(true)
+    const champs = nettoyer(f)
+    const modifies = CHAMPS_COORDONNEES.filter(k => (champs[k] ?? null) !== (p[k] ?? null))
+    if (modifies.length) {
+      const { error } = await supabase.from('patients').update(champs).eq('id', p.id)
+      if (error) { setMsg({ alerte: messageErreur(error) }); setEnvoi(false); return }
+      journaliser(profil, `Coordonnées modifiées : ${p.nomComplet}`, { patient_id: p.id, service_id: p.service_id })
+      await charger()
+    }
+    setEnvoi(false); setF(null)
+    setMsg({ succes: modifies.length ? 'Coordonnées enregistrées.' : 'Aucune modification.' })
+  }
+
+  if (f) return (
+    <form onSubmit={enregistrer} className="carte-blanche" style={{ display: 'grid', gap: 18, borderTop: '3px solid var(--bleu)' }} noValidate>
+      <section className="section-form" style={{ borderTop: 0, paddingTop: 0 }}>
+        <h2>Coordonnées</h2>
+        <SectionCoordonnees f={f} maj={maj} setF={setF} />
+      </section>
+      <section className="section-form"><h2>Personne à prévenir</h2><SectionContact f={f} maj={maj} /></section>
+      <section className="section-form"><h2>Suivi</h2><SectionSuivi f={f} maj={maj} /></section>
+      <Message type="alerte">{msg.alerte}</Message>
+      <div className="rangee-btn">
+        <button type="submit" className="btn btn-plein" disabled={envoi}>{envoi ? 'Enregistrement…' : 'Enregistrer'}</button>
+        <button type="button" className="btn" onClick={() => { setF(null); setMsg({}) }}>Annuler</button>
+      </div>
+    </form>
+  )
+
   const lignes = [
     ['Adresse', [p.adresse, p.complement_adresse, [p.code_postal, p.ville].filter(Boolean).join(' ')].filter(Boolean).join('\n')],
     ['Téléphone', p.telephone], ['E-mail', p.email],
     ['Personne à prévenir', [p.contact_urgence_nom, p.contact_urgence_lien && `(${p.contact_urgence_lien})`, p.contact_urgence_telephone].filter(Boolean).join(' ')],
     ['Médecin traitant', p.medecin_traitant], ['Lieu de naissance', p.lieu_naissance], ['Traitement en cours', p.traitement_en_cours],
   ].filter(([, v]) => v)
-  if (!lignes.length) return null
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 1, background: 'var(--filet)', border: '1px solid var(--filet)' }}>
-      {lignes.map(([k, v]) => (
-        <div key={k} style={{ background: '#fff', padding: '12px 14px' }}>
-          <div className="etiquette">{k}</div>
-          <div style={{ fontSize: 14.5, color: 'var(--encre)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{v}</div>
+    <div style={{ display: 'grid', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+        <span className="etiquette">Coordonnées</span>
+        <button type="button" className="btn-lien bleu" onClick={() => { setF(versFormulaire(p)); setMsg({}) }}>{lignes.length ? 'MODIFIER' : 'AJOUTER LES COORDONNÉES'}</button>
+      </div>
+      <Message type="succes">{msg.succes}</Message>
+      {!lignes.length ? <Vide>Aucune coordonnée renseignée.</Vide> : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 1, background: 'var(--filet)', border: '1px solid var(--filet)' }}>
+          {lignes.map(([k, v]) => (
+            <div key={k} style={{ background: '#fff', padding: '12px 14px' }}>
+              <div className="etiquette">{k}</div>
+              <div style={{ fontSize: 14.5, color: 'var(--encre)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{v}</div>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   )
 }
@@ -49,9 +101,11 @@ export default function Dossier() {
   const [onglet, setOnglet] = useState('Résumé')
   const [d, setD] = useState(null)
 
+  // Rechargé quand on change de patient, pas quand sa fiche est mise à jour.
+  const patientId = patient?.id
   const charger = useCallback(async () => {
-    if (!patient) return
-    const q = t => supabase.from(t).select('*').eq('patient_id', patient.id)
+    if (!patientId) return
+    const q = t => supabase.from(t).select('*').eq('patient_id', patientId)
     const [cst, adm, pr, cr, doc, ex, rdv, med, inf] = await Promise.all([
       q('constantes_vitales').order('date_mesure'),
       q('administrations_medicament').order('heure_administration', { ascending: false }),
@@ -67,7 +121,7 @@ export default function Dossier() {
     for (const x of inf.data || []) personnes[x.id] = nomComplet(x)
     for (const x of med.data || []) personnes[x.id] = nomMedecin(x)
     setD({ cst: cst.data || [], adm: adm.data || [], pr: pr.data || [], cr: cr.data || [], doc: doc.data || [], ex: ex.data || [], rdv: rdv.data || [], personnes })
-  }, [patient])
+  }, [patientId])
   useEffect(() => { setD(null); charger() }, [charger])
 
   const pts = k => (d?.cst || []).map(c => ({ t: c.date_mesure, v: c[k] }))
