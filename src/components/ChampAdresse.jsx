@@ -1,7 +1,23 @@
 import { useEffect, useId, useRef, useState } from 'react'
 
 // Base Adresse Nationale (IGN) : gratuite, sans clé, adresses de France.
-const API = 'https://data.geopf.fr/geocodage/search'
+// D'abord via le relais du site (vercel.json → /api/adresse), sinon en direct.
+const SOURCES = ['/api/adresse', 'https://data.geopf.fr/geocodage/search']
+
+async function chercher(q, signal) {
+  let derniere
+  for (const url of SOURCES) {
+    try {
+      const r = await fetch(`${url}?q=${encodeURIComponent(q)}&autocomplete=1&limit=6`, { signal })
+      if (!r.ok || !(r.headers.get('content-type') || '').includes('json')) throw new Error(`HTTP ${r.status}`)
+      return await r.json()
+    } catch (e) {
+      if (e.name === 'AbortError') throw e
+      derniere = e
+    }
+  }
+  throw derniere
+}
 
 /**
  * Adresse avec suggestions : on tape, la liste des adresses possibles s'affiche au-dessus du champ.
@@ -22,8 +38,7 @@ export default function ChampAdresse({ label = 'Adresse', valeur, onChange, onCh
     const t = setTimeout(async () => {
       setEtat('recherche')
       try {
-        const r = await fetch(`${API}?q=${encodeURIComponent(q)}&autocomplete=1&limit=6`, { signal: ctrl.signal })
-        const json = await r.json()
+        const json = await chercher(q, ctrl.signal)
         const liste = (json.features || []).map(f => f.properties).map(p => ({
           libelle: p.label, adresse: p.name, code_postal: p.postcode || '', ville: p.city || '', contexte: p.context || '',
         }))

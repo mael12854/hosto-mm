@@ -14,5 +14,8 @@
     "VITE_SUPABASE_URL": "https://cdkktcwpzucdqmmvkoeh.supabase.co",
     "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_nt5Q22LEEuRNt3RvUufqdA_oiLzHLOK"
   },
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/api/adresse", "destination": "https://data.geopf.fr/geocodage/search" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
