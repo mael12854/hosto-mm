@@ -110,8 +110,8 @@ export function imprimerCarnet(patient = null) {
       </div>
       <div class="alerte"><div class="k">Allergies connues</div><div class="v">${esc(p.allergies || '')}</div></div>
       <div class="case"><div class="k">Antécédents médicaux et chirurgicaux</div><div class="v" style="white-space:pre-wrap;min-height:14mm">${esc(p.antecedents || '')}</div></div>
-      <div class="case"><div class="k">En cas d'urgence, prévenir</div><div class="v" style="min-height:10mm"></div></div>
-      <div class="case"><div class="k">Médecin traitant</div><div class="v" style="min-height:7mm"></div></div>
+      <div class="case"><div class="k">En cas d'urgence, prévenir</div><div class="v" style="min-height:10mm">${esc([p.contact_urgence_nom, p.contact_urgence_lien && `(${p.contact_urgence_lien})`, p.contact_urgence_telephone].filter(Boolean).join(' '))}</div></div>
+      <div class="case"><div class="k">Médecin traitant</div><div class="v" style="min-height:7mm">${esc(p.medecin_traitant || '')}</div></div>
       ${pied()}</section>`,
 
     `<section class="page">${tete('Courbes de croissance', '02')}

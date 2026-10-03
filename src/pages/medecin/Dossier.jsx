@@ -22,6 +22,27 @@ function Ligne({ titre, meta, children }) {
   )
 }
 
+/** Coordonnées, personne à prévenir et suivi : uniquement les rubriques renseignées. */
+function Coordonnees({ p }) {
+  const lignes = [
+    ['Adresse', [p.adresse, p.complement_adresse, [p.code_postal, p.ville].filter(Boolean).join(' ')].filter(Boolean).join('\n')],
+    ['Téléphone', p.telephone], ['E-mail', p.email],
+    ['Personne à prévenir', [p.contact_urgence_nom, p.contact_urgence_lien && `(${p.contact_urgence_lien})`, p.contact_urgence_telephone].filter(Boolean).join(' ')],
+    ['Médecin traitant', p.medecin_traitant], ['Lieu de naissance', p.lieu_naissance], ['Traitement en cours', p.traitement_en_cours],
+  ].filter(([, v]) => v)
+  if (!lignes.length) return null
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 1, background: 'var(--filet)', border: '1px solid var(--filet)' }}>
+      {lignes.map(([k, v]) => (
+        <div key={k} style={{ background: '#fff', padding: '12px 14px' }}>
+          <div className="etiquette">{k}</div>
+          <div style={{ fontSize: 14.5, color: 'var(--encre)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{v}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function Dossier() {
   const { profil } = useAuth()
   const { patient } = usePatients()
@@ -89,6 +110,7 @@ export default function Dossier() {
                   <div key={k} style={{ background: 'var(--papier)', padding: '14px 16px' }}><div className="etiquette">{k}</div><div style={{ fontSize: 22, fontWeight: 700, color: 'var(--encre)' }}>{v}</div></div>
                 ))}
               </div>
+              <Coordonnees p={patient} />
               {patient.antecedents && <div className="note"><strong style={{ color: 'var(--encre)' }}>Antécédents : </strong>{patient.antecedents}</div>}
               <div className="etiquette">Séjours</div>
               {!patient.sejours.length ? <Vide>Aucun séjour.</Vide> : (

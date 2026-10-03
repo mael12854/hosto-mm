@@ -46,3 +46,21 @@ export function PatientsProvider({ children }) {
 }
 
 export const usePatients = () => useContext(PatientsCtx)
+
+/** Prochain numéro de dossier « aaaa-nnnn » d'après les dossiers visibles. */
+export function prochainNumero(patients, decalage = 0) {
+  const annee = new Date().getFullYear()
+  const max = patients.map(p => String(p.numero_dossier || '').match(new RegExp(`^${annee}-(\\d+)$`)))
+    .filter(Boolean).reduce((m, x) => Math.max(m, Number(x[1])), 0)
+  return `${annee}-${String(max + 1 + decalage).padStart(4, '0')}`
+}
+
+/** Crée le dossier ; réessaie avec le numéro suivant si un autre service l'a déjà pris. */
+export async function creerDossier(patients, champs) {
+  for (let essai = 0; essai < 5; essai++) {
+    const { data, error } = await supabase.from('patients').insert({ ...champs, numero_dossier: prochainNumero(patients, essai) }).select().single()
+    if (!error) return data
+    if (error.code !== '23505') throw error
+  }
+  throw new Error("Impossible d'attribuer un numéro de dossier. Réessayez.")
+}

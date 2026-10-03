@@ -13,6 +13,7 @@ import TableauDeBord from './pages/medecin/TableauDeBord.jsx'
 import Ordonnance from './pages/medecin/Ordonnance.jsx'
 import CompteRendu from './pages/medecin/CompteRendu.jsx'
 import RendezVous from './pages/medecin/RendezVous.jsx'
+import NouveauPatient from './pages/medecin/NouveauPatient.jsx'
 import Admissions from './pages/medecin/Admissions.jsx'
 import Examens from './pages/medecin/Examens.jsx'
 import Messages from './pages/medecin/Messages.jsx'
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="dossier" element={<Dossier />} />
         <Route path="affiches" element={<Affiches />} />
         <Route path="entree-sortie" element={<EntreeSortie />} />
+        <Route path="nouveau-patient" element={<NouveauPatient />} />
         <Route path="admissions" element={<Admissions />} />
         <Route path="rendez-vous" element={<RendezVous />} />
         <Route path="bracelets" element={<Bracelets />} />

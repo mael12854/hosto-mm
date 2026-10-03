@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BadgeSejour, Champ, ChampDate, EnTeteOutil, Message, Saisie, Vide } from '../../components/ui.jsx'
 import { useAuth } from '../../lib/auth.jsx'
-import { usePatients } from '../../lib/patients.jsx'
+import { creerDossier, usePatients } from '../../lib/patients.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { dateHeure, statut, valeurDateHeure } from '../../lib/format.js'
 
@@ -16,14 +16,6 @@ const accord = (mot, sexe) => mot + (sexe === 'F' ? 'e' : sexe === 'M' ? '' : '(
 
 /** Séjour en cours : entré, pas encore sorti. */
 const hospitalise = p => p.sejour && statut(p.sejour).cle !== 'sorti'
-
-/** Prochain numéro de dossier « aaaa-nnnn » d'après les dossiers visibles. */
-function prochainNumero(patients, decalage = 0) {
-  const annee = new Date().getFullYear()
-  const max = patients.map(p => String(p.numero_dossier || '').match(new RegExp(`^${annee}-(\\d+)$`)))
-    .filter(Boolean).reduce((m, x) => Math.max(m, Number(x[1])), 0)
-  return `${annee}-${String(max + 1 + decalage).padStart(4, '0')}`
-}
 
 function Entrer({ services, lits, onFait }) {
   const { profil } = useAuth()
@@ -55,17 +47,11 @@ function Entrer({ services, lits, onFait }) {
     try {
       let patient = choisi
       if (mode === 'nouveau') {
-        // Numéro de dossier suivant ; on réessaie si un autre service l'a déjà pris.
-        for (let essai = 0; essai < 5 && !patient; essai++) {
-          const { data, error } = await supabase.from('patients').insert({
-            prenom: nouveau.prenom.trim(), nom: nouveau.nom.trim().toUpperCase(), date_naissance: nouveau.date_naissance || null,
-            sexe: nouveau.sexe || null, groupe_sanguin: nouveau.groupe_sanguin.trim() || null, allergies: nouveau.allergies.trim() || null,
-            service_id: serviceId, numero_dossier: prochainNumero(patients, essai),
-          }).select().single()
-          if (error && error.code !== '23505') throw error
-          patient = data
-        }
-        if (!patient) throw new Error('Impossible d\'attribuer un numéro de dossier. Réessayez.')
+        patient = await creerDossier(patients, {
+          prenom: nouveau.prenom.trim(), nom: nouveau.nom.trim().toUpperCase(), date_naissance: nouveau.date_naissance || null,
+          sexe: nouveau.sexe || null, groupe_sanguin: nouveau.groupe_sanguin.trim() || null, allergies: nouveau.allergies.trim() || null,
+          service_id: serviceId,
+        })
       } else if (patient.service_id !== serviceId) {
         const { error } = await supabase.from('patients').update({ service_id: serviceId }).eq('id', patient.id)
         if (error) throw error
@@ -116,6 +102,7 @@ function Entrer({ services, lits, onFait }) {
           </Champ>
           <Saisie label="Groupe sanguin" mono placeholder="A+" valeur={nouveau.groupe_sanguin} onChange={majN('groupe_sanguin')} />
           <Saisie label="Allergies" placeholder="Aucune" valeur={nouveau.allergies} onChange={majN('allergies')} />
+          <Link to="/medecin/nouveau-patient" className="btn-lien bleu" style={{ gridColumn: '1 / -1' }}>DOSSIER COMPLET AVEC ADRESSE ET CONTACTS →</Link>
         </div>
       )}
 
