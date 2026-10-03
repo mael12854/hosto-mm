@@ -4,13 +4,25 @@ import { useEffect, useId, useRef, useState } from 'react'
 // D'abord via le relais du site (vercel.json → /api/adresse), sinon en direct.
 const SOURCES = ['/api/adresse', 'https://data.geopf.fr/geocodage/search']
 
+const cache = new Map()
+const pause = (ms, signal) => new Promise((ok, ko) => {
+  const t = setTimeout(ok, ms)
+  signal.addEventListener('abort', () => { clearTimeout(t); ko(new DOMException('', 'AbortError')) }, { once: true })
+})
+
 async function chercher(q, signal) {
+  const cle = q.toLowerCase()
+  if (cache.has(cle)) return cache.get(cle)
   let derniere
   for (const url of SOURCES) {
     try {
-      const r = await fetch(`${url}?q=${encodeURIComponent(q)}&autocomplete=1&limit=6`, { signal })
+      let r = await fetch(`${url}?q=${encodeURIComponent(q)}&autocomplete=1&limit=6`, { signal })
+      // L'API limite le nombre de requêtes par seconde : on réessaie une fois.
+      if (r.status === 429) { await pause(1100, signal); r = await fetch(`${url}?q=${encodeURIComponent(q)}&autocomplete=1&limit=6`, { signal }) }
       if (!r.ok || !(r.headers.get('content-type') || '').includes('json')) throw new Error(`HTTP ${r.status}`)
-      return await r.json()
+      const json = await r.json()
+      cache.set(cle, json)
+      return json
     } catch (e) {
       if (e.name === 'AbortError') throw e
       derniere = e
@@ -46,7 +58,7 @@ export default function ChampAdresse({ label = 'Adresse', valeur, onChange, onCh
       } catch (e) {
         if (e.name !== 'AbortError') { setSuggestions([]); setEtat('hors-ligne') }
       }
-    }, 250)
+    }, 450)
     return () => { clearTimeout(t); ctrl.abort() }
   }, [valeur])
 
