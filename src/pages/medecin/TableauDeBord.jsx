@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { BadgeSejour, Chargement, EnTeteOutil, Vide } from '../../components/ui.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { usePatients } from '../../lib/patients.jsx'
+import { useSites } from '../../lib/sites.jsx'
 import { supabase, journaliser } from '../../lib/supabase.js'
 import { dateHeure, heure, nombre, statut } from '../../lib/format.js'
 
@@ -11,12 +12,13 @@ const BORD = { stable: 'var(--vert)', surveiller: 'var(--ambre)', urgence: 'var(
 /** Carte patient de la charte : filet de statut à gauche, constantes en mono. */
 export function CartePatient({ p, constante, action }) {
   const s = statut(p.sejour)
+  const site = useSites()?.nom(s.cle !== 'sorti' ? p.sejour?.site_id : null)
   return (
     <article style={{ background: 'var(--papier)', border: '1px solid var(--filet)', borderLeft: `4px solid ${BORD[s.cle]}`, padding: 22, display: 'grid', gap: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 19, fontWeight: 600, color: 'var(--encre)' }}>{p.nomComplet}</div>
-          <div className="mono" style={{ fontSize: 12, color: 'var(--gris)' }}>{p.numero_dossier || p.ipp} · Service {p.service}{p.num_chambre ? ' · ' + p.num_chambre : ''}</div>
+          <div className="mono" style={{ fontSize: 12, color: 'var(--gris)' }}>{p.numero_dossier || p.ipp} · Service {p.service}{site ? ' · ' + site : ''}{p.num_chambre ? ' · ' + p.num_chambre : ''}</div>
         </div>
         <BadgeSejour sejour={p.sejour} />
       </div>
@@ -37,6 +39,7 @@ export function CartePatient({ p, constante, action }) {
 export default function TableauDeBord() {
   const { profil } = useAuth()
   const { patients, chargement, choisir } = usePatients()
+  const sites = useSites()
   const [constantes, setConstantes] = useState({})
   const [rdvJour, setRdvJour] = useState(null)
 
@@ -63,27 +66,30 @@ export default function TableauDeBord() {
     })
   }, [])
 
-  const presents = patients.filter(p => statut(p.sejour).cle !== 'sorti')
+  // Le site de travail filtre les séjours en cours et les rendez-vous ; les dossiers restent tous visibles.
+  const ici = p => !sites.actif || p.sejour?.site_id === sites.actif
+  const presents = patients.filter(p => statut(p.sejour).cle !== 'sorti' && ici(p))
+  const rdvIci = rdvJour && sites.filtrer(rdvJour)
   const ordre = { urgence: 0, surveiller: 1, stable: 2, sorti: 3 }
   const tries = [...patients].sort((a, b) => ordre[statut(a.sejour).cle] - ordre[statut(b.sejour).cle])
   const maintenant = new Date()
-  const prochain = (rdvJour || []).find(r => new Date(r.date_heure) >= maintenant)
+  const prochain = (rdvIci || []).find(r => new Date(r.date_heure) >= maintenant)
   const nomPatient = id => patients.find(p => p.id === id)
 
   return (
     <>
       <EnTeteOutil titre="Tableau de bord">
-        Bonjour {profil?.medecin?.prenom}. {presents.length ? `${presents.length} patient${presents.length > 1 ? 's' : ''} hospitalisé${presents.length > 1 ? 's' : ''} dans vos services.` : 'Aucun patient hospitalisé dans vos services.'}
-        {rdvJour?.length ? ` ${rdvJour.length} rendez-vous aujourd'hui${prochain ? `, le prochain à ${heure(prochain.date_heure)}` : ''}.` : ''}
+        Bonjour {profil?.medecin?.prenom}. {presents.length ? `${presents.length} patient${presents.length > 1 ? 's' : ''} hospitalisé${presents.length > 1 ? 's' : ''} dans vos services${sites.actif ? ` à ${sites.nom(sites.actif)}` : ''}.` : `Aucun patient hospitalisé dans vos services${sites.actif ? ` à ${sites.nom(sites.actif)}` : ''}.`}
+        {rdvIci?.length ? ` ${rdvIci.length} rendez-vous aujourd'hui${prochain ? `, le prochain à ${heure(prochain.date_heure)}` : ''}.` : ''}
       </EnTeteOutil>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: 1, background: 'var(--filet)', border: '1px solid var(--filet)' }}>
         {[
           ['Patients', patients.length, 'Dans vos services'],
           ['Hospitalisés', presents.length, 'Séjour en cours'],
-          ['Urgences', patients.filter(p => statut(p.sejour).cle === 'urgence').length, 'Triage P1 – P2'],
-          ['À surveiller', patients.filter(p => statut(p.sejour).cle === 'surveiller').length, 'Triage P3'],
-          ['Rendez-vous', rdvJour?.length ?? '…', "Aujourd'hui"],
+          ['Urgences', presents.filter(p => statut(p.sejour).cle === 'urgence').length, 'Triage P1 – P2'],
+          ['À surveiller', presents.filter(p => statut(p.sejour).cle === 'surveiller').length, 'Triage P3'],
+          ['Rendez-vous', rdvIci?.length ?? '…', "Aujourd'hui"],
         ].map(([k, v, t]) => (
           <div key={k} style={{ background: 'var(--papier)', padding: '22px 24px' }}>
             <div className="etiquette">{k}</div>
@@ -98,9 +104,9 @@ export default function TableauDeBord() {
           <div className="etiquette">Rendez-vous du jour · {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
           <Link to="/medecin/rendez-vous" className="btn-lien bleu">TOUS LES RENDEZ-VOUS →</Link>
         </div>
-        {rdvJour === null ? <Chargement /> : !rdvJour.length ? <Vide>Aucun rendez-vous prévu aujourd'hui.</Vide> : (
+        {rdvIci === null ? <Chargement /> : !rdvIci.length ? <Vide>Aucun rendez-vous prévu aujourd'hui{sites.actif ? ` à ${sites.nom(sites.actif)}` : ''}.</Vide> : (
           <div style={{ display: 'grid', gap: 8 }}>
-            {rdvJour.map(r => {
+            {rdvIci.map(r => {
               const p = nomPatient(r.patient_id)
               const passe = new Date(r.date_heure) < maintenant
               const estProchain = prochain?.id === r.id
@@ -110,7 +116,7 @@ export default function TableauDeBord() {
                     <span className="mono" style={{ fontSize: 18, color: 'var(--encre)', flex: 'none' }}>{heure(r.date_heure)}</span>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--encre)' }}>{p?.nomComplet || 'Patient'}</div>
-                      <div style={{ fontSize: 14, color: 'var(--texte)' }}>{r.motif || 'Consultation'}{p?.service ? ` · ${p.service}` : ''}</div>
+                      <div style={{ fontSize: 14, color: 'var(--texte)' }}>{r.motif || 'Consultation'}{p?.service ? ` · ${p.service}` : ''}{r.site_id && !sites.actif ? ` · ${sites.nom(r.site_id)}` : ''}</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>

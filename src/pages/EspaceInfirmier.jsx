@@ -7,6 +7,7 @@ import { PatientsProvider, usePatients } from '../lib/patients.jsx'
 import { supabase, journaliser, messageErreur } from '../lib/supabase.js'
 import { dateHeure, nombre, nomComplet, valeurDateHeure } from '../lib/format.js'
 import { imprimerCarnet } from '../lib/carnet.js'
+import { SelecteurSite } from '../lib/sites.jsx'
 
 const VIDE = { temperature: '', pouls: '', tension_systolique: '', tension_diastolique: '', saturation: '', poids: '', notes: '' }
 const num = v => (v === '' ? null : Number(String(v).replace(',', '.')))
@@ -122,7 +123,7 @@ export default function EspaceInfirmier() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--papier)' }}>
       <EnTeteEspace titre="Espace infirmier" qui={(moi?.prenom || nomComplet(moi)).toUpperCase()}
-        liens={profil.medecin && <Link to="/medecin" style={{ color: 'var(--bleu-pale)', fontSize: 14 }}>Espace médecin →</Link>} />
+        liens={<><SelecteurSite compact />{profil.medecin && <Link to="/medecin" style={{ color: 'var(--bleu-pale)', fontSize: 14 }}>Espace médecin →</Link>}</>} />
       <PatientsProvider><Soins /></PatientsProvider>
     </div>
   )

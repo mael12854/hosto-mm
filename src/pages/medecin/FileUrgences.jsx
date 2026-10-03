@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Chargement, EnTeteOutil, Message, Vide } from '../../components/ui.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { usePatients } from '../../lib/patients.jsx'
+import { siteDe, useSites } from '../../lib/sites.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { heure, statut } from '../../lib/format.js'
 
@@ -25,6 +26,7 @@ function duree(min) {
 export default function FileUrgences() {
   const { profil } = useAuth()
   const { patients, chargement, charger, choisir } = usePatients()
+  const sites = useSites()
   const [maintenant, setMaintenant] = useState(() => Date.now())
   const [msg, setMsg] = useState({})
 
@@ -36,7 +38,7 @@ export default function FileUrgences() {
   }, [charger])
 
   // Arrivés il y a plus de 24 h et jamais passés « vu » : séjours longs, hors de la file.
-  const presentsTous = patients.filter(p => p.sejour && statut(p.sejour).cle !== 'sorti')
+  const presentsTous = patients.filter(p => p.sejour && statut(p.sejour).cle !== 'sorti' && (!sites.actif || p.sejour.site_id === sites.actif))
   const anciens = presentsTous.filter(p => (p.sejour.statut_triage || 'en_attente') === 'en_attente' && maintenant - new Date(p.sejour.date_entree) > 24 * 3600000)
   const presents = presentsTous.filter(p => !anciens.includes(p))
   const niveau = p => p.sejour.niveau_urgence || 5
@@ -54,7 +56,7 @@ export default function FileUrgences() {
   return (
     <>
       <EnTeteOutil titre="File d'attente">
-        Patients hospitalisés triés par priorité (P1 d'abord) puis par heure d'arrivée. L'attente passe en rouge quand le délai visé pour le niveau de triage est dépassé.
+        {sites.actif ? `${siteDe(sites.nom(sites.actif)).replace(/^s/, 'S')} : patients` : 'Patients des deux sites,'} hospitalisés triés par priorité (P1 d'abord) puis par heure d'arrivée. L'attente passe en rouge quand le délai visé pour le niveau de triage est dépassé.
       </EnTeteOutil>
       <Message type="succes">{msg.succes}</Message>
       <Message type="alerte">{msg.alerte}</Message>
@@ -98,7 +100,7 @@ export default function FileUrgences() {
                         <span className="badge" style={{ background: COULEUR[n] }}>P{n}</span>
                       </div>
                       <div className="mono" style={{ fontSize: 12, color: depasse ? 'var(--rouge)' : 'var(--gris)', fontWeight: depasse ? 500 : 400 }}>
-                        ARRIVÉE {heure(p.sejour.date_entree)} · {cle === 'vu' ? 'VU' : `ATTENTE ${duree(min).toUpperCase()}`}{depasse ? ' · DÉLAI DÉPASSÉ' : ''} · {p.service.toUpperCase()}
+                        ARRIVÉE {heure(p.sejour.date_entree)} · {cle === 'vu' ? 'VU' : `ATTENTE ${duree(min).toUpperCase()}`}{depasse ? ' · DÉLAI DÉPASSÉ' : ''} · {p.service.toUpperCase()}{!sites.actif && p.sejour.site_id ? ` · ${sites.nom(p.sejour.site_id).toUpperCase()}` : ''}
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                         {cle === 'en_attente' && <button type="button" className="btn" onClick={() => modifier(p, { statut_triage: 'en_cours' }, 'Prise en charge')}>Je prends ce patient</button>}

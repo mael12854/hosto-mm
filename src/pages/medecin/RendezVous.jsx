@@ -5,6 +5,7 @@ import { usePatients } from '../../lib/patients.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { dateHeure, nomMedecin, valeurDateHeure } from '../../lib/format.js'
 import { envoyerParEmail } from '../../lib/impression.js'
+import { adresseSite, siteDe, useSites } from '../../lib/sites.jsx'
 
 const STATUTS = { 'prévu': ['bleu', 'Prévu'], 'terminé': ['stable', 'Terminé'], 'annulé': ['sorti', 'Annulé'] }
 
@@ -22,6 +23,9 @@ const heure = d => new Date(d).toLocaleTimeString('fr-FR', { hour: '2-digit', mi
 export default function RendezVous() {
   const { profil } = useAuth()
   const { patients, patient } = usePatients()
+  const sites = useSites()
+  const [siteChoisi, setSiteChoisi] = useState('')
+  const siteId = siteChoisi || sites.parDefaut?.id || ''
   const [quand, setQuand] = useState(creneauParDefaut)
   const [motif, setMotif] = useState('')
   const [liste, setListe] = useState(null)
@@ -39,8 +43,9 @@ export default function RendezVous() {
 
   const nomPatient = useMemo(() => Object.fromEntries(patients.map(p => [p.id, p])), [patients])
   const debutJour = new Date(); debutJour.setHours(0, 0, 0, 0)
-  const aVenir = (liste || []).filter(r => r.statut === 'prévu' && new Date(r.date_heure) >= debutJour)
-  const autres = (liste || []).filter(r => !aVenir.includes(r)).reverse()
+  const visibles = sites.filtrer(liste || [])
+  const aVenir = visibles.filter(r => r.statut === 'prévu' && new Date(r.date_heure) >= debutJour)
+  const autres = visibles.filter(r => !aVenir.includes(r)).reverse()
   const parJour = aVenir.reduce((acc, r) => { const j = jourLong(r.date_heure); (acc[j] = acc[j] || []).push(r); return acc }, {})
 
   const programmer = async e => {
@@ -49,15 +54,16 @@ export default function RendezVous() {
     const x = new Date(quand)
     if (!quand || isNaN(x)) { setMsg({ alerte: "Indiquez la date et l'heure du rendez-vous." }); return }
     if (x < new Date()) { setMsg({ alerte: 'Le rendez-vous doit être dans le futur.' }); return }
+    if (!siteId) { setMsg({ alerte: 'Choisissez le site du rendez-vous.' }); return }
     setEnvoi(true)
     const { error } = await supabase.from('rendez_vous').insert({
-      patient_id: patient.id, service_id: patient.service_id, medecin_id: profil.userId,
+      patient_id: patient.id, service_id: patient.service_id, site_id: siteId, medecin_id: profil.userId,
       date_heure: x.toISOString(), motif: motif.trim() || null, statut: 'prévu',
     })
     setEnvoi(false)
     if (error) { setMsg({ alerte: messageErreur(error) }); return }
-    journaliser(profil, `Rendez-vous programmé le ${dateHeure(x)}`, { patient_id: patient.id, service_id: patient.service_id })
-    setMsg({ succes: `Rendez-vous programmé pour ${patient.nomComplet} le ${jourLong(x)} à ${heure(x)}.` })
+    journaliser(profil, `Rendez-vous programmé le ${dateHeure(x)} à ${sites.nom(siteId)}`, { patient_id: patient.id, service_id: patient.service_id })
+    setMsg({ succes: `Rendez-vous programmé pour ${patient.nomComplet} le ${jourLong(x)} à ${heure(x)}, ${siteDe(sites.nom(siteId))}.` })
     setMotif(''); setQuand(creneauParDefaut())
     charger()
   }
@@ -72,10 +78,11 @@ export default function RendezVous() {
 
   const convoquer = r => {
     const p = nomPatient[r.patient_id]
+    const site = sites.parId(r.site_id)
     envoyerParEmail({
       destinataire: p?.email || '',
       sujet: `Votre rendez-vous du ${jourLong(r.date_heure)} à ${heure(r.date_heure)} — Hôpital M&M`,
-      texte: `RENDEZ-VOUS\n\nPatient : ${p?.nomComplet || ''}\nDate : ${jourLong(r.date_heure)}\nHeure : ${heure(r.date_heure)}\nService : ${p?.service || ''}\nMédecin : ${medecin}${r.motif ? `\nMotif : ${r.motif}` : ''}\n\nMerci de vous présenter 5 minutes avant l'heure. En cas d'empêchement, prévenez l'Hôpital M&M.`,
+      texte: `RENDEZ-VOUS\n\nPatient : ${p?.nomComplet || ''}\nDate : ${jourLong(r.date_heure)}\nHeure : ${heure(r.date_heure)}${site ? `\nLieu : Hôpital M&M, ${siteDe(site.nom)}\nAdresse : ${adresseSite(site)}` : ''}\nService : ${p?.service || ''}\nMédecin : ${medecin}${r.motif ? `\nMotif : ${r.motif}` : ''}\n\nMerci de vous présenter 5 minutes avant l'heure. En cas d'empêchement, prévenez l'Hôpital M&M.`,
     })
   }
 
@@ -88,7 +95,7 @@ export default function RendezVous() {
           <span className="mono" style={{ fontSize: 18, color: 'var(--encre)', flex: 'none' }}>{heure(r.date_heure)}</span>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--encre)' }}>{p?.nomComplet || 'Patient'}</div>
-            <div style={{ fontSize: 14, color: 'var(--texte)' }}>{r.motif || 'Consultation'}{p?.service ? ` · ${p.service}` : ''}</div>
+            <div style={{ fontSize: 14, color: 'var(--texte)' }}>{r.motif || 'Consultation'}{p?.service ? ` · ${p.service}` : ''}{r.site_id && !sites.actif ? ` · ${sites.nom(r.site_id)}` : ''}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -115,6 +122,12 @@ export default function RendezVous() {
         <div className="etiquette">Nouveau rendez-vous</div>
         <div className="grille-champs large">
           <ChampDate type="datetime-local" label="Date et heure" valeur={quand} onChange={setQuand} min={valeurDateHeure()} required />
+          <label className="champ">
+            <span>Site</span>
+            <select className="saisie" value={siteId} onChange={e => setSiteChoisi(e.target.value)}>
+              {sites.sites.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+            </select>
+          </label>
           <label className="champ" style={{ gridColumn: 'span 2' }}>
             <span>Motif</span>
             <input className="saisie" value={motif} onChange={e => setMotif(e.target.value)} placeholder="Contrôle, pansement, retrait du plâtre…" />
@@ -129,7 +142,7 @@ export default function RendezVous() {
 
       <div style={{ display: 'grid', gap: 16 }}>
         <div className="etiquette">Prochains rendez-vous · {aVenir.length}</div>
-        {liste === null ? <Chargement /> : !aVenir.length ? <Vide>Aucun rendez-vous prévu.</Vide> : Object.entries(parJour).map(([jour, rdv]) => (
+        {liste === null ? <Chargement /> : !aVenir.length ? <Vide>Aucun rendez-vous prévu{sites.actif ? ` à ${sites.nom(sites.actif)}` : ''}.</Vide> : Object.entries(parJour).map(([jour, rdv]) => (
           <div key={jour} style={{ display: 'grid', gap: 8 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--bleu)' }}>{majuscule(jour)}</div>
             {rdv.map(r => <Ligne key={r.id} r={r} />)}

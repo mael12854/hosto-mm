@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth.jsx'
 import { usePatients } from '../lib/patients.jsx'
 import { supabase, journaliser, messageErreur } from '../lib/supabase.js'
 import { aujourdhui, date, dateHeure, esc, nomMedecin } from '../lib/format.js'
+import { useSites } from '../lib/sites.jsx'
 import { enteteHtml, envoyerParEmail, imprimer, piedHtml, telechargerPdf } from '../lib/impression.js'
 
 /**
@@ -14,6 +15,7 @@ import { enteteHtml, envoyerParEmail, imprimer, piedHtml, telechargerPdf } from 
 export default function Redaction({ outil, intro, titreDefaut, modeles, placeholder }) {
   const { profil } = useAuth()
   const { patient } = usePatients()
+  const sites = useSites()
   const [titre, setTitre] = useState(titreDefaut)
   const [texte, setTexte] = useState('')
   const [liste, setListe] = useState([])
@@ -53,7 +55,7 @@ export default function Redaction({ outil, intro, titreDefaut, modeles, placehol
     texte: `${t.toUpperCase()}\n${le} · ${medecin} · ${patient?.service || ''}\nPatient : ${patient?.nomComplet}\n\n${corpsTexte}`,
   })
 
-  const corps = () => enteteHtml({ titre, date: aujourdhui(), medecin, service: patient?.service, patient: patient?.nomComplet })
+  const corps = () => enteteHtml({ titre, date: aujourdhui(), medecin, service: patient?.service, patient: patient?.nomComplet, site: sites.dePatient(patient) })
     + `<div class="v">${esc(texte)}</div><p style="margin-top:28px">${esc(medecin)}</p>` + piedHtml(`${titre} — Hôpital M&M`, `Édité le ${aujourdhui()}`)
 
   return (

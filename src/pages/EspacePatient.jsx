@@ -5,6 +5,7 @@ import CarnetSante from '../components/CarnetSante.jsx'
 import { Chargement, Vide } from '../components/ui.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { supabase } from '../lib/supabase.js'
+import { adresseSite, siteDe, useSites } from '../lib/sites.jsx'
 import { date, dateCourte, dateHeure, nomMedecin } from '../lib/format.js'
 
 function Bloc({ titre, children }) {
@@ -14,6 +15,7 @@ function Bloc({ titre, children }) {
 export default function EspacePatient() {
   const { profil } = useAuth()
   const p = profil.patient
+  const sites = useSites()
   const [d, setD] = useState(null)
 
   useEffect(() => {
@@ -69,7 +71,10 @@ export default function EspacePatient() {
             <Bloc titre="Mes prochains rendez-vous">
               {!d.rdv.length ? <Vide>Aucun rendez-vous prévu.</Vide> : d.rdv.map(r => (
                 <div key={r.id} className="ligne-liste">
-                  <span style={{ fontSize: 14.5, color: 'var(--encre)' }}>{r.motif || 'Consultation'}</span>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ fontSize: 14.5, color: 'var(--encre)', display: 'block' }}>{r.motif || 'Consultation'}</span>
+                    {sites.parId(r.site_id) && <span style={{ fontSize: 13.5, color: 'var(--texte)' }}>{siteDe(sites.nom(r.site_id)).replace(/^s/, 'S')} · {adresseSite(sites.parId(r.site_id))}</span>}
+                  </span>
                   <span className="mono" style={{ fontSize: 12, color: 'var(--bleu)' }}>{dateHeure(r.date_heure)}</span>
                 </div>
               ))}

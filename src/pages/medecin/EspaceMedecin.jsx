@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { SelecteurSite } from '../../lib/sites.jsx'
 import { LogoMark } from '../../components/Logo.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { PatientsProvider } from '../../lib/patients.jsx'
@@ -38,6 +39,7 @@ export default function EspaceMedecin() {
               <LogoMark variante="inverse" size={30} />
               <div><div className="nom">Hôpital M&amp;M</div><div className="espace">ESPACE MÉDECIN</div></div>
             </Link>
+            <SelecteurSite />
             <nav aria-label="Outils">
               {GROUPES.map(([groupe, outils]) => (
                 <div key={groupe} className="groupe-menu">

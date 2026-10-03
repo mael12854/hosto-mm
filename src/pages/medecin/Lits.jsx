@@ -2,14 +2,16 @@ import { useCallback, useEffect, useState } from 'react'
 import { BadgeSejour, Chargement, EnTeteOutil, Message, Vide } from '../../components/ui.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { usePatients } from '../../lib/patients.jsx'
+import { useSites } from '../../lib/sites.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 
 export default function Lits() {
   const { profil } = useAuth()
   const { patients } = usePatients()
+  const sites = useSites()
   const [lits, setLits] = useState(null)
   const [services, setServices] = useState([])
-  const [nouveau, setNouveau] = useState({ identifiant: '', service_id: '' })
+  const [nouveau, setNouveau] = useState({ identifiant: '', service_id: '', site_id: '' })
   const [msg, setMsg] = useState({})
 
   const charger = useCallback(async () => {
@@ -34,34 +36,36 @@ export default function Lits() {
 
   const ajouter = async e => {
     e.preventDefault()
-    if (!nouveau.identifiant.trim() || !nouveau.service_id) return
-    const { error } = await supabase.from('lits').insert({ identifiant: nouveau.identifiant.trim(), service_id: nouveau.service_id })
+    const site_id = nouveau.site_id || sites.parDefaut?.id
+    if (!nouveau.identifiant.trim() || !nouveau.service_id || !site_id) return
+    const { error } = await supabase.from('lits').insert({ identifiant: nouveau.identifiant.trim(), service_id: nouveau.service_id, site_id })
     if (error) { setMsg({ alerte: messageErreur(error) }); return }
     setNouveau(n => ({ ...n, identifiant: '' }))
-    setMsg({ succes: 'Lit ajouté.' })
+    setMsg({ succes: `Lit ajouté à ${sites.nom(site_id)}.` })
     charger()
   }
 
-  const occupes = (lits || []).filter(l => l.patient_id).length
+  const visibles = sites.filtrer(lits || [])
+  const occupes = visibles.filter(l => l.patient_id).length
 
   return (
     <>
-      <EnTeteOutil titre="Lits">Occupation des lits de vos services. Attribuez un lit à un patient ou libérez-le à la sortie.</EnTeteOutil>
+      <EnTeteOutil titre="Lits">Occupation des lits de vos services{sites.actif ? ` à ${sites.nom(sites.actif)}` : ' sur les deux sites'}. Attribuez un lit à un patient ou libérez-le à la sortie.</EnTeteOutil>
       <Message type="succes">{msg.succes}</Message>
       <Message type="alerte">{msg.alerte}</Message>
       {lits === null ? <Chargement /> : (
         <>
-          <div className="etiquette">{occupes} occupé{occupes > 1 ? 's' : ''} · {lits.length - occupes} libre{lits.length - occupes > 1 ? 's' : ''} · {lits.length} au total</div>
-          {!lits.length ? <Vide>Aucun lit enregistré dans vos services.</Vide> : (
+          <div className="etiquette">{occupes} occupé{occupes > 1 ? 's' : ''} · {visibles.length - occupes} libre{visibles.length - occupes > 1 ? 's' : ''} · {visibles.length} au total</div>
+          {!visibles.length ? <Vide>Aucun lit enregistré dans vos services{sites.actif ? ` à ${sites.nom(sites.actif)}` : ''}.</Vide> : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: 14 }}>
-              {lits.map(l => {
+              {visibles.map(l => {
                 const p = patients.find(x => x.id === l.patient_id)
                 const candidats = patients.filter(x => x.service_id === l.service_id)
                 return (
                   <div key={l.id} className="carte-blanche" style={{ borderLeft: `4px solid ${l.patient_id ? 'var(--bleu)' : 'var(--filet)'}`, display: 'grid', gap: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline' }}>
                       <span className="mono" style={{ fontSize: 20, color: 'var(--encre)' }}>{l.identifiant}</span>
-                      <span className="etiquette">{l.services?.nom}</span>
+                      <span className="etiquette" style={{ textAlign: 'right' }}>{l.services?.nom}<br />{sites.nom(l.site_id)}</span>
                     </div>
                     {p ? (
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
@@ -81,6 +85,11 @@ export default function Lits() {
           {services.length > 0 && (
             <form onSubmit={ajouter} className="carte-blanche" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
               <label className="champ" style={{ flex: '1 1 160px' }}><span>Nouveau lit</span><input className="saisie mono" placeholder="004-A" value={nouveau.identifiant} onChange={e => setNouveau(n => ({ ...n, identifiant: e.target.value }))} /></label>
+              <label className="champ" style={{ flex: '1 1 200px' }}><span>Site</span>
+                <select className="saisie" value={nouveau.site_id || sites.parDefaut?.id || ''} onChange={e => setNouveau(n => ({ ...n, site_id: e.target.value }))}>
+                  {sites.sites.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+                </select>
+              </label>
               <label className="champ" style={{ flex: '1 1 200px' }}><span>Service</span>
                 <select className="saisie" value={nouveau.service_id} onChange={e => setNouveau(n => ({ ...n, service_id: e.target.value }))}>
                   {services.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}

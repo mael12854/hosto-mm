@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { BadgeSejour, Champ, ChampDate, EnTeteOutil, Message, Saisie, Vide } from '../../components/ui.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { creerDossier, usePatients } from '../../lib/patients.jsx'
+import { useSites } from '../../lib/sites.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { dateHeure, statut, valeurDateHeure } from '../../lib/format.js'
 
@@ -20,10 +21,11 @@ const hospitalise = p => p.sejour && statut(p.sejour).cle !== 'sorti'
 function Entrer({ services, lits, onFait }) {
   const { profil } = useAuth()
   const { patients } = usePatients()
+  const sites = useSites()
   const [mode, setMode] = useState('existant')
   const [patientId, setPatientId] = useState('')
   const [nouveau, setNouveau] = useState(NOUVEAU)
-  const [sejour, setSejour] = useState({ date_entree: valeurDateHeure(), service_id: '', motif: '', niveau_urgence: 4, lit_id: '' })
+  const [sejour, setSejour] = useState({ date_entree: valeurDateHeure(), service_id: '', site_id: '', motif: '', niveau_urgence: 4, lit_id: '' })
   const [msg, setMsg] = useState({})
   const [envoi, setEnvoi] = useState(false)
   const majN = k => v => setNouveau(x => ({ ...x, [k]: v }))
@@ -33,7 +35,8 @@ function Entrer({ services, lits, onFait }) {
   const choisi = sortis.find(p => p.id === patientId)
   // Service par défaut : celui du patient choisi, sinon les Urgences, sinon le premier de mes services.
   const serviceId = sejour.service_id || choisi?.service_id || (services.find(s => s.nom === 'Urgences') || services[0])?.id || ''
-  const litsLibres = lits.filter(l => l.service_id === serviceId && !l.patient_id)
+  const siteId = sejour.site_id || sites.parDefaut?.id || ''
+  const litsLibres = lits.filter(l => l.service_id === serviceId && l.site_id === siteId && !l.patient_id)
 
   const faireEntrer = async e => {
     e.preventDefault()
@@ -43,6 +46,7 @@ function Entrer({ services, lits, onFait }) {
     const entree = new Date(sejour.date_entree)
     if (!sejour.date_entree || isNaN(entree)) { setMsg({ alerte: "Indiquez la date et l'heure d'entrée." }); return }
     if (!serviceId) { setMsg({ alerte: 'Choisissez un service.' }); return }
+    if (!siteId) { setMsg({ alerte: 'Choisissez le site.' }); return }
     setEnvoi(true)
     try {
       let patient = choisi
@@ -57,16 +61,16 @@ function Entrer({ services, lits, onFait }) {
         if (error) throw error
       }
       const { error } = await supabase.from('hospitalisations').insert({
-        patient_id: patient.id, service_id: serviceId, medecin_id: profil.userId,
+        patient_id: patient.id, service_id: serviceId, site_id: siteId, medecin_id: profil.userId,
         date_entree: entree.toISOString(), motif: sejour.motif.trim() || null, niveau_urgence: Number(sejour.niveau_urgence),
       })
       if (error) throw error
       const lit = litsLibres.find(l => l.id === sejour.lit_id)
       if (lit) await supabase.from('lits').update({ patient_id: patient.id }).eq('id', lit.id)
       const nom = `${patient.prenom} ${patient.nom}`
-      journaliser(profil, `Entrée : ${nom} (triage P${sejour.niveau_urgence})${lit ? `, lit ${lit.identifiant}` : ''}`, { patient_id: patient.id, service_id: serviceId })
-      setMsg({ succes: `${nom} est ${accord('entré', patient.sexe)} le ${dateHeure(entree)}${mode === 'nouveau' ? ` — dossier ${patient.numero_dossier}` : ''}${lit ? `, lit ${lit.identifiant}` : ''}.` })
-      setPatientId(''); setNouveau(NOUVEAU); setSejour({ date_entree: valeurDateHeure(), service_id: '', motif: '', niveau_urgence: 4, lit_id: '' })
+      journaliser(profil, `Entrée à ${sites.nom(siteId)} : ${nom} (triage P${sejour.niveau_urgence})${lit ? `, lit ${lit.identifiant}` : ''}`, { patient_id: patient.id, service_id: serviceId })
+      setMsg({ succes: `${nom} est ${accord('entré', patient.sexe)} à ${sites.nom(siteId)} le ${dateHeure(entree)}${mode === 'nouveau' ? ` — dossier ${patient.numero_dossier}` : ''}${lit ? `, lit ${lit.identifiant}` : ''}.` })
+      setPatientId(''); setNouveau(NOUVEAU); setSejour(x => ({ date_entree: valeurDateHeure(), service_id: '', site_id: x.site_id, motif: '', niveau_urgence: 4, lit_id: '' }))
       onFait()
     } catch (err) {
       setMsg({ alerte: messageErreur(err) })
@@ -108,6 +112,11 @@ function Entrer({ services, lits, onFait }) {
 
       <div className="grille-champs">
         <ChampDate type="datetime-local" label="Date et heure d'entrée" valeur={sejour.date_entree} onChange={majS('date_entree')} required />
+        <Champ label="Site">
+          <select className="saisie" value={siteId} onChange={e => setSejour(x => ({ ...x, site_id: e.target.value, lit_id: '' }))}>
+            {sites.sites.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+          </select>
+        </Champ>
         <Champ label="Service">
           <select className="saisie" value={serviceId} onChange={e => setSejour(x => ({ ...x, service_id: e.target.value, lit_id: '' }))}>
             {services.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
@@ -139,9 +148,10 @@ function Entrer({ services, lits, onFait }) {
 function Sortir({ lits, onFait }) {
   const { profil } = useAuth()
   const { patients, choisir } = usePatients()
+  const sites = useSites()
   const [quand, setQuand] = useState({})
   const [msg, setMsg] = useState({})
-  const presents = patients.filter(hospitalise)
+  const presents = patients.filter(hospitalise).filter(p => !sites.actif || p.sejour.site_id === sites.actif)
 
   const faireSortir = async p => {
     const v = quand[p.id] || valeurDateHeure()
@@ -165,7 +175,7 @@ function Sortir({ lits, onFait }) {
       </div>
       <Message type="succes">{msg.succes}</Message>
       <Message type="alerte">{msg.alerte}</Message>
-      {!presents.length ? <Vide>Aucun patient hospitalisé dans vos services.</Vide> : presents.map(p => {
+      {!presents.length ? <Vide>Aucun patient hospitalisé dans vos services{sites.actif ? ` à ${sites.nom(sites.actif)}` : ''}.</Vide> : presents.map(p => {
         const lit = lits.find(l => l.patient_id === p.id)
         return (
           <div key={p.id} style={{ border: '1px solid var(--filet)', padding: 14, display: 'grid', gap: 10 }}>
@@ -173,7 +183,7 @@ function Sortir({ lits, onFait }) {
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--encre)' }}>{p.nomComplet}</div>
                 <div className="mono" style={{ fontSize: 11.5, color: 'var(--gris)' }}>
-                  ENTRÉE {dateHeure(p.sejour.date_entree)} · {p.service.toUpperCase()}{lit ? ` · LIT ${lit.identifiant}` : ''}
+                  ENTRÉE {dateHeure(p.sejour.date_entree)} · {sites.nom(p.sejour.site_id).toUpperCase() || '—'} · {p.service.toUpperCase()}{lit ? ` · LIT ${lit.identifiant}` : ''}
                 </div>
                 {p.sejour.motif && <div style={{ fontSize: 14, color: 'var(--texte)', marginTop: 2 }}>{p.sejour.motif}</div>}
               </div>

@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/auth.jsx'
 import { usePatients } from '../../lib/patients.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { aujourdhui, dateHeure, esc, nombre, nomMedecin, valeurDateHeure } from '../../lib/format.js'
+import { useSites } from '../../lib/sites.jsx'
 import { enteteHtml, envoyerParEmail, imprimer, piedHtml, telechargerPdf } from '../../lib/impression.js'
 
 const TITRES = {
@@ -51,6 +52,7 @@ const ligneConstantes = d => CONSTANTES.filter(([k]) => d[k]).map(([k, l]) => `$
 export default function CompteRendu() {
   const { profil } = useAuth()
   const { patient } = usePatients()
+  const sites = useSites()
   const [f, setF] = useState(VIDE)
   const [docs, setDocs] = useState([])
   const [msg, setMsg] = useState({})
@@ -132,7 +134,7 @@ export default function CompteRendu() {
       + (i === 1 ? bloc('Constantes', ligneConstantes(f)) : '')
       + champs.map(([k, l]) => bloc(l, f[k])).join('')
       + (i === 3 ? bloc('Prochain rendez-vous', f.prochain_rdv && dateHeure(f.prochain_rdv)) : '')).join('')
-    return enteteHtml({ titre, date: dateHeure(f.date_consultation), medecin, service: patient?.service, patient: patient?.nomComplet })
+    return enteteHtml({ titre, date: dateHeure(f.date_consultation), medecin, service: patient?.service, patient: patient?.nomComplet, site: sites.dePatient(patient) })
       + `<p class="pat"><span>TYPE</span>${esc(f.type)}${f.adresse_par ? ` · adressé par ${esc(f.adresse_par)}` : ''}</p>`
       + sections + `<p style="margin-top:24px">${esc(medecin)}</p>` + piedHtml(`${titre} — Hôpital M&M`, `Édité le ${aujourdhui()}`)
   }

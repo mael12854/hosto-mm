@@ -12,9 +12,10 @@ const TZ = "Europe/Paris"
 const jourParis = (d: Date) => new Intl.DateTimeFormat("fr-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d)
 const heureParis = (d: Date) => new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }).format(d)
 const jourLong = (d: Date) => new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(d)
+const siteDe = (nom: string) => (/^[aeiouyhàâéèêëîïôûü]/i.test(nom) ? `site d'${nom}` : `site de ${nom}`)
 const esc = (t: string) => String(t ?? "").replace(/[&<>"]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]!))
 
-function html(site: string, prenom: string, quand: string, heure: string, service: string, motif: string) {
+function html(site: string, prenom: string, quand: string, heure: string, service: string, motif: string, lieu: string, adresse: string) {
   const SANS = "'Source Sans 3','Segoe UI',Helvetica,Arial,sans-serif", MONO = "'IBM Plex Mono',Menlo,Consolas,monospace"
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#E7E2D8;font-family:${SANS};color:#48525A">
@@ -29,7 +30,8 @@ function html(site: string, prenom: string, quand: string, heure: string, servic
 <td style="padding:14px 16px;background:#F4F1EA"><p style="margin:0;font-family:${MONO};font-size:11px;letter-spacing:.1em;color:#656C71">DATE</p><p style="margin:2px 0 0;font-size:16px;color:#1E262B;font-weight:600">${esc(quand)}</p></td>
 <td style="padding:14px 16px;background:#F4F1EA"><p style="margin:0;font-family:${MONO};font-size:11px;letter-spacing:.1em;color:#656C71">HEURE</p><p style="margin:2px 0 0;font-family:${MONO};font-size:22px;color:#1E262B">${esc(heure)}</p></td>
 </tr></table>
-<p style="margin:16px 0 0;font-size:16px;line-height:1.55">Service : <strong style="color:#1E262B">${esc(service)}</strong>${motif ? `<br>Motif : ${esc(motif)}` : ""}</p>
+${lieu ? `<p style="margin:16px 0 0;font-size:16px;line-height:1.55">Lieu : <strong style="color:#1E262B">${esc(siteDe(lieu))}</strong><br>${esc(adresse)}</p>` : ""}
+<p style="margin:${lieu ? "8px" : "16px"} 0 0;font-size:16px;line-height:1.55">Service : <strong style="color:#1E262B">${esc(service)}</strong>${motif ? `<br>Motif : ${esc(motif)}` : ""}</p>
 <p style="margin:16px 0 0;font-size:16px;line-height:1.55">Merci de vous présenter 5 minutes avant l'heure. En cas d'empêchement, écrivez-nous depuis « Mon Hôpital M&amp;M ».</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0 0"><tr><td bgcolor="#1D5C74"><a href="${site}/patient" style="display:inline-block;padding:13px 22px;font-size:15px;font-weight:600;color:#F4F1EA;text-decoration:none">Voir mon rendez-vous</a></td></tr></table>
 </td></tr>
@@ -49,7 +51,7 @@ Deno.serve(async () => {
   const maintenant = new Date()
   const demain = jourParis(new Date(maintenant.getTime() + 24 * 3600 * 1000))
   const { data: rdvs, error } = await db.from("rendez_vous")
-    .select("id, date_heure, motif, patients(prenom, nom, email, auth_id), services(nom)")
+    .select("id, date_heure, motif, patients(prenom, nom, email, auth_id), services(nom), sites(nom, adresse, code_postal)")
     .eq("statut", "prévu").is("rappel_envoye_le", null)
     .gte("date_heure", maintenant.toISOString())
     .lt("date_heure", new Date(maintenant.getTime() + 48 * 3600 * 1000).toISOString())
@@ -60,7 +62,8 @@ Deno.serve(async () => {
     const d = new Date(r.date_heure)
     if (jourParis(d) !== demain) continue
     // deno-lint-ignore no-explicit-any
-    const p = r.patients as any, s = r.services as any
+    const p = r.patients as any, s = r.services as any, l = r.sites as any
+    const adresse = l ? [l.adresse, [l.code_postal, l.nom].filter(Boolean).join(" ")].filter(Boolean).join(", ") : ""
     // E-mail du dossier, sinon celui du compte « Mon Hôpital M&M ».
     let email = p?.email as string | null
     if (!email && p?.auth_id) email = (await db.auth.admin.getUserById(p.auth_id)).data.user?.email ?? null
@@ -71,8 +74,8 @@ Deno.serve(async () => {
       body: JSON.stringify({
         sender: { email: expediteur, name: "Hôpital M&M" },
         to: [{ email, name: `${p.prenom} ${p.nom}` }],
-        subject: `Rappel : rendez-vous demain à ${heureParis(d)} — Hôpital M&M`,
-        htmlContent: html(site, p.prenom, jourLong(d), heureParis(d), s?.nom || "", r.motif || ""),
+        subject: `Rappel : rendez-vous demain à ${heureParis(d)}${l ? `, ${siteDe(l.nom)}` : ""} — Hôpital M&M`,
+        htmlContent: html(site, p.prenom, jourLong(d), heureParis(d), s?.nom || "", r.motif || "", l?.nom || "", adresse),
       }),
     })
     if (envoi.ok) {

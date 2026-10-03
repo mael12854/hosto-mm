@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Logo, LogoMark } from '../components/Logo.jsx'
 import { useAuth, espaceDe } from '../lib/auth.jsx'
+import { adresseSite, useSites } from '../lib/sites.jsx'
 
 function Titre({ num, children }) {
   return <div className="titre-section"><span className="num">{num}</span><h2>{children}</h2></div>
@@ -14,6 +15,7 @@ const ESPACES = [
 
 export default function Accueil() {
   const { session, profil } = useAuth()
+  const { sites } = useSites()
   const cible = session ? espaceDe(profil) : '/connexion'
   return (
     <div className="page">
@@ -54,7 +56,7 @@ export default function Accueil() {
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 1, background: 'var(--filet)', border: '1px solid var(--filet)', marginTop: 24 }}>
-          {[['Services', '5', 'Urgences, pédiatrie, cardiologie…'], ['Personnel', 'Maël · Marin', "Et l'équipe soignante"], ['Ouverture', '7j/7', "Sauf pendant l'école"], ['Patients', 'Toute la famille', 'Animaux acceptés']].map(([k, v, t]) => (
+          {[['Sites', '2', 'Issy-les-Moulineaux · Igny'], ['Services', '5', 'Urgences, pédiatrie, cardiologie…'], ['Personnel', 'Maël · Marin', "Et l'équipe soignante"], ['Ouverture', '7j/7', "Sauf pendant l'école"], ['Patients', 'Toute la famille', 'Animaux acceptés']].map(([k, v, t]) => (
             <div key={k} style={{ background: 'var(--papier)', padding: '22px 24px' }}>
               <div className="etiquette">{k}</div>
               <div style={{ fontSize: v.length > 6 ? 22 : 26, fontWeight: 700, color: 'var(--encre)' }}>{v}</div>
@@ -65,7 +67,27 @@ export default function Accueil() {
       </section>
 
       <section style={{ padding: '72px 0 0' }}>
-        <Titre num="02">Les espaces</Titre>
+        <Titre num="02">Nos deux sites</Titre>
+        <p style={{ fontSize: 15.5, color: 'var(--texte)', maxWidth: '62ch', marginBottom: 24 }}>Les mêmes services sur chaque site : urgences, pédiatrie, cardiologie, médecine générale et orthopédie.</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 290px), 1fr))', gap: 20 }}>
+          {sites.map((s, i) => (
+            <div key={s.id} className="carte" style={{ padding: 26, display: 'grid', gap: 14, borderTop: '3px solid var(--bleu)' }}>
+              <div>
+                <div className="mono" style={{ fontSize: 11.5, letterSpacing: '0.12em', color: 'var(--bleu)' }}>SITE {String(i + 1).padStart(2, '0')}</div>
+                <h3 style={{ fontSize: 24, fontWeight: 700, color: 'var(--encre)', marginTop: 4 }}>{s.nom}</h3>
+              </div>
+              <address style={{ fontStyle: 'normal', fontSize: 16, color: 'var(--texte)', lineHeight: 1.5 }}>
+                {s.adresse && <>{s.adresse}<br /></>}{s.code_postal} {s.nom}
+              </address>
+              <a className="btn-lien bleu" style={{ justifySelf: 'start' }} target="_blank" rel="noreferrer"
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Hôpital M&M, ' + adresseSite(s))}`}>ITINÉRAIRE →</a>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section style={{ padding: '72px 0 0' }}>
+        <Titre num="03">Les espaces</Titre>
         <p style={{ fontSize: 15.5, color: 'var(--texte)', maxWidth: '62ch', marginBottom: 24 }}>La plateforme compte trois espaces. Même en-tête, même grille : seul le contenu change selon votre rôle.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 290px), 1fr))', gap: 20 }}>
           {ESPACES.map(([titre, texte, bleu]) => (
@@ -84,7 +106,7 @@ export default function Accueil() {
       </section>
 
       <section style={{ padding: '72px 0 0' }}>
-        <Titre num="03">Infos pratiques</Titre>
+        <Titre num="04">Infos pratiques</Titre>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 18 }}>
           {[['Urgences', 'Signalez-vous tout de suite à un soignant : vous êtes pris en charge en priorité.'], ['Salle d\'attente', 'Asseyez-vous, on vous appelle. Couloir, porte 2.'], ['Vos documents', 'Ordonnances et consignes de sortie sont dans « Mon Hôpital M&M ».']].map(([k, t]) => (
             <div key={k} className="carte"><h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--encre)', marginBottom: 8 }}>{k}</h3><p style={{ fontSize: 15, color: 'var(--texte)' }}>{t}</p></div>
@@ -94,7 +116,7 @@ export default function Accueil() {
 
       <footer style={{ marginTop: 72, borderTop: '3px solid var(--bleu)', paddingTop: 26, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ width: 200, maxWidth: '50%' }}><Logo /></div>
-        <p className="mono" style={{ fontSize: 11.5, letterSpacing: '0.06em', color: 'var(--gris)', textAlign: 'right' }}>HÔPITAL M&amp;M · {new Date().getFullYear()}<br />QUESTIONS : DEMANDER À MAËL OU À MARIN</p>
+        <p className="mono" style={{ fontSize: 11.5, letterSpacing: '0.06em', color: 'var(--gris)', textAlign: 'right' }}>HÔPITAL M&amp;M · {new Date().getFullYear()}<br />{sites.map(s => s.nom.toUpperCase()).join(' · ')}<br />QUESTIONS : DEMANDER À MAËL OU À MARIN</p>
       </footer>
     </div>
   )

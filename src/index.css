@@ -136,6 +136,15 @@ select.saisie { font-size: 15.5px; }
 .barre nav a:hover { background: var(--bleu-profond); color: var(--papier); }
 .barre nav a.active { color: var(--bleu); background: var(--papier); font-weight: 600; border-left-color: var(--rouge); }
 .barre .bas { margin-top: auto; display: grid; }
+.selecteur-site { display: grid; gap: 4px; padding: 0 18px; }
+.selecteur-site > span { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--bleu-pale); text-transform: uppercase; }
+.selecteur-site select {
+  font: inherit; font-size: 14px; color: var(--papier); background: var(--bleu-profond); border: 1px solid rgba(244, 241, 234, 0.35);
+  border-radius: 0; padding: 7px 8px; width: 100%;
+}
+.selecteur-site select option { color: var(--encre); background: #fff; }
+.selecteur-site.compact { padding: 0; grid-auto-flow: column; align-items: center; gap: 8px; }
+.selecteur-site.compact select { width: auto; font-size: 13px; padding: 5px 6px; }
 .barre .qui { padding: 0 18px 10px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: var(--bleu-pale); }
 .barre .bas a.lien-espace { color: var(--bleu-pale); padding: 8px 18px; font-size: 13.5px; }
 .barre .bas a.lien-espace:hover { color: var(--papier); background: var(--bleu-profond); }

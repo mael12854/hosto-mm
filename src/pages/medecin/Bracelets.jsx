@@ -4,6 +4,7 @@ import { LogoMark } from '../../components/Logo.jsx'
 import { ChampDate, EnTeteOutil, SelecteurPatient, Saisie } from '../../components/ui.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { usePatients } from '../../lib/patients.jsx'
+import { useSites } from '../../lib/sites.jsx'
 import { journaliser } from '../../lib/supabase.js'
 import { date, esc, valeurDate } from '../../lib/format.js'
 import { imprimer } from '../../lib/impression.js'
@@ -20,17 +21,20 @@ const STYLE_BRACELET = `body{margin:0;font-family:'Source Sans 3',sans-serif;col
 export default function Bracelets() {
   const { profil } = useAuth()
   const { patient } = usePatients()
+  const sites = useSites()
   const nav = useNavigate()
   const [d, setD] = useState({ nom: '', dossier: '', service: '', naissance: '', groupe: '', allergies: '' })
   const maj = k => v => setD(x => ({ ...x, [k]: v }))
 
+  // Site du séjour en cours, écrit avec le service : « Urgences · Igny ».
+  const site = patient?.sejour && !patient.sejour.date_sortie ? sites.nom(patient.sejour.site_id) : ''
   useEffect(() => {
     if (!patient) return
     setD({
-      nom: patient.nomComplet, dossier: patient.numero_dossier || patient.ipp || '', service: patient.service,
+      nom: patient.nomComplet, dossier: patient.numero_dossier || patient.ipp || '', service: [patient.service, site].filter(Boolean).join(' · '),
       naissance: valeurDate(patient.date_naissance), groupe: patient.groupe_sanguin || '', allergies: patient.allergies || '',
     })
-  }, [patient])
+  }, [patient, site])
 
   // Sur le bracelet et dans le QR, la date de naissance est écrite jj/mm/aaaa.
   const affiche = useMemo(() => ({ ...d, naissance: date(d.naissance) }), [d])

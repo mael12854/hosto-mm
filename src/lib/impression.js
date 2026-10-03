@@ -1,5 +1,6 @@
 import { esc } from './format.js'
 import { logoSvgTexte } from '../components/Logo.jsx'
+import { adresseSite, siteDe } from './sites.jsx'
 
 const POLICES = '<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">'
 
@@ -7,6 +8,7 @@ const STYLE_DOC = `
 body{margin:0;font-family:'Source Sans 3',sans-serif;color:#1E262B;font-size:12pt;line-height:1.45}
 header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:2px solid #1D5C74;padding-bottom:10px;margin-bottom:14px}
 .logo{width:60mm}.titre{font-size:14pt;font-weight:700;margin-top:6px}
+.adr{font-family:'IBM Plex Mono',monospace;font-size:8.5pt;color:#656C71;margin-top:3px;letter-spacing:.02em}
 .m{font-family:'IBM Plex Mono',monospace;font-size:9pt;text-align:right;white-space:nowrap}
 .m .s{color:#1D5C74}
 .pat{margin:0 0 12px}.pat span{font-family:'IBM Plex Mono',monospace;font-size:8.5pt;letter-spacing:.1em;color:#656C71;margin-right:6px}
@@ -18,9 +20,9 @@ ol{padding-left:18px}li{margin:8px 0}li span{font-family:'IBM Plex Mono',monospa
 footer{margin-top:24px;display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:8.5pt;color:#656C71;border-top:1px solid #D8D2C6;padding-top:6px}
 *{-webkit-print-color-adjust:exact;print-color-adjust:exact}`
 
-/** En-tête officiel commun à tous les documents imprimés. */
-export function enteteHtml({ titre, date, medecin, service, patient }) {
-  return `<header><div><div class="logo">${logoSvgTexte}</div><div class="titre">${esc(titre)}</div></div>
+/** En-tête officiel commun à tous les documents imprimés ; site = lieu (adresse sous le logo). */
+export function enteteHtml({ titre, date, medecin, service, patient, site }) {
+  return `<header><div><div class="logo">${logoSvgTexte}</div>${site ? `<div class="adr">${esc(siteDe(site.nom).toUpperCase())} · ${esc(adresseSite(site))}</div>` : ''}<div class="titre">${esc(titre)}</div></div>
 <div class="m">${esc(date)}<br>${esc(medecin)}<br><span class="s">${esc(String(service || '').toUpperCase())}</span></div></header>
 ${patient ? `<p class="pat"><span>PATIENT</span><strong>${esc(patient)}</strong></p>` : ''}`
 }

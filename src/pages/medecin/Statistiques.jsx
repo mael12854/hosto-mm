@@ -3,6 +3,7 @@ import { Chargement, EnTeteOutil } from '../../components/ui.jsx'
 import { usePatients } from '../../lib/patients.jsx'
 import { supabase } from '../../lib/supabase.js'
 import { statut } from '../../lib/format.js'
+import { useSites } from '../../lib/sites.jsx'
 
 function Tuile({ k, v, t }) {
   return (
@@ -33,16 +34,21 @@ function Barres({ titre, donnees }) {
 
 export default function Statistiques() {
   const { patients, chargement } = usePatients()
+  const sites = useSites()
   const [c, setC] = useState(null)
+  const [rdv, setRdv] = useState([])
 
   useEffect(() => {
     const t = ['prescriptions', 'comptes_rendus', 'documents_officiels', 'constantes_vitales', 'examens_laboratoire', 'lits']
     Promise.all(t.map(x => supabase.from(x).select('*', { count: 'exact', head: true }))).then(r => setC(Object.fromEntries(t.map((x, i) => [x, r[i].count ?? 0]))))
+    supabase.from('rendez_vous').select('site_id').then(({ data }) => setRdv(data || []))
   }, [])
 
   if (chargement || !c) return <><EnTeteOutil titre="Statistiques" /><Chargement /></>
   const sejours = patients.flatMap(p => p.sejours)
   const parService = Object.entries(patients.reduce((a, p) => ({ ...a, [p.service]: (a[p.service] || 0) + 1 }), {}))
+  const enCours = patients.filter(p => statut(p.sejour).cle !== 'sorti')
+  const parSite = (titre, lignes) => <Barres titre={titre} donnees={sites.sites.map(s => [s.nom, lignes.filter(l => l.site_id === s.id).length])} />
   const parStatut = ['urgence', 'surveiller', 'stable', 'sorti'].map(k => [{ urgence: 'Urgence', surveiller: 'À surveiller', stable: 'Stable', sorti: 'Sorti' }[k], patients.filter(p => statut(p.sejour).cle === k).length])
 
   return (
@@ -61,6 +67,9 @@ export default function Statistiques() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: 18 }}>
         <Barres titre="Patients par service" donnees={parService} />
         <Barres titre="Patients par statut" donnees={parStatut} />
+        {parSite('Séjours par site', sejours)}
+        {parSite('Hospitalisés en ce moment, par site', enCours.map(p => p.sejour))}
+        {parSite('Rendez-vous par site', rdv)}
       </div>
     </>
   )

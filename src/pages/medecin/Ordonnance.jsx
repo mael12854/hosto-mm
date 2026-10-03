@@ -6,6 +6,7 @@ import { usePatients } from '../../lib/patients.jsx'
 import { MEDICAMENTS } from '../../lib/medicaments.js'
 import { BUCKET_PJ, supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { aujourdhui, date, dateHeure, esc, nomMedecin, normaliser, pluriel, taille } from '../../lib/format.js'
+import { useSites } from '../../lib/sites.jsx'
 import { enteteHtml, envoyerParEmail, imprimer, piedHtml } from '../../lib/impression.js'
 
 const cle = r => r.join('|')
@@ -14,6 +15,7 @@ const CLASSES = ['Toutes', ...Array.from(new Set(MEDICAMENTS.map(r => r[2]))).so
 export default function Ordonnance() {
   const { profil } = useAuth()
   const { patient } = usePatients()
+  const sites = useSites()
   const [q, setQ] = useState('')
   const [classe, setClasse] = useState('Toutes')
   const [ord, setOrd] = useState([])
@@ -101,7 +103,7 @@ export default function Ordonnance() {
     const pieces = pj.length ? `<h3>Pièces jointes</h3><ul class="pj">${pj.map(d => `<li>${esc(d.nom)}</li>`).join('')}</ul>` : ''
     imprimer({
       titre: 'Ordonnance', page: 'A5',
-      corps: enteteHtml({ titre: 'Ordonnance', date: aujourdhui(), medecin, service: patient?.service, patient: patient?.nomComplet })
+      corps: enteteHtml({ titre: 'Ordonnance', date: aujourdhui(), medecin, service: patient?.service, patient: patient?.nomComplet, site: sites.dePatient(patient) })
         + `<ol>${lignes}</ol>${pieces}` + piedHtml('Document officiel — Hôpital M&M', `${patient?.numero_dossier || ''}`),
     })
   }

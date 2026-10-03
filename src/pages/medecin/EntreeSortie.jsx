@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/auth.jsx'
 import { usePatients } from '../../lib/patients.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { aujourdhui, date, dateHeure, esc, nomMedecin, valeurDate } from '../../lib/format.js'
+import { useSites } from '../../lib/sites.jsx'
 import { enteteHtml, envoyerParEmail, imprimer, piedHtml, telechargerPdf } from '../../lib/impression.js'
 
 const VIDE = {
@@ -36,6 +37,7 @@ const depuisBase = d => ({ ...VIDE, ...Object.fromEntries(Object.keys(VIDE).map(
 export default function EntreeSortie() {
   const { profil } = useAuth()
   const { patient } = usePatients()
+  const sites = useSites()
   const [f, setF] = useState(VIDE)
   const [docs, setDocs] = useState([])
   const [msg, setMsg] = useState({})
@@ -74,7 +76,7 @@ export default function EntreeSortie() {
 
   const corpsHtml = () => {
     const bloc = (k, l) => `<div class="k">${esc(l)}</div><div class="v">${esc(k.startsWith('date_') ? date(f[k]) : f[k])}</div>`
-    return enteteHtml({ titre: 'Bulletin & Synthèse Entrée / Sortie', date: aujourdhui(), medecin, service: patient?.service, patient: patient?.nomComplet })
+    return enteteHtml({ titre: 'Bulletin & Synthèse Entrée / Sortie', date: aujourdhui(), medecin, service: patient?.service, patient: patient?.nomComplet, site: sites.dePatient(patient) })
       + `<h3><b>1.</b>Dates &amp; Modalités du séjour</h3>${bloc('date_entree', "Date d'entrée (admission)")}${bloc('date_sortie', 'Date de sortie effective / prévue')}${bloc('mode_sortie', 'Mode de sortie')}`
       + SECTIONS.map(([titre, champs], i) => `<h3><b>${i + 2}.</b>${esc(titre)}</h3>${champs.map(([k, l]) => bloc(k, l)).join('')}`).join('')
       + piedHtml('Document Officiel Entrée/Sortie — Hôpital M&M', `Édité le ${aujourdhui()}`)
