@@ -9,9 +9,11 @@ import { useSites } from '../../lib/sites.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { aujourdhui, date, dateHeure, esc, heure, nomComplet, nomMedecin } from '../../lib/format.js'
 import { CHAMPS_CR, STATUTS, tempsComplet } from '../../lib/operations.js'
+import { ANESTHESIES, SEJOURS } from '../../lib/interventions.js'
 import { enteteHtml, imprimer, piedHtml } from '../../lib/impression.js'
 import { imprimerLivret } from '../../lib/livret.js'
-import { estMineur, imprimerDossierOperatoire } from '../../lib/dossierOperatoire.js'
+import { estMineur } from '../../lib/dossierOperatoire.js'
+import ChoixDossierOp from '../../components/ChoixDossierOp.jsx'
 
 const ONGLETS = ['Préparation', 'Check-list', 'Au bloc', 'Compte-rendu', 'Réveil']
 
@@ -23,7 +25,7 @@ function Preparation({ op, enregistrer }) {
   const champs = () => ({
     consult_anesthesie_le: f.consult_anesthesie_le || null, asa: f.asa ? Number(f.asa) : null, anesthesiste: f.anesthesiste?.trim() || null,
     consentement_signe: !!f.consentement_signe, consentement_anesthesie: !!f.consentement_anesthesie, jeun_verifie: !!f.jeun_verifie,
-    consignes_preop: f.consignes_preop?.trim() || null,
+    consignes_preop: f.consignes_preop?.trim() || null, sejour: f.sejour, anesthesie: f.anesthesie,
   })
   return (
     <div className="carte-blanche" style={{ display: 'grid', gap: 14 }}>
@@ -35,6 +37,12 @@ function Preparation({ op, enregistrer }) {
           </select>
         </label>
         <label className="champ"><span>Anesthésiste</span><input className="saisie" value={f.anesthesiste || ''} onChange={e => maj('anesthesiste')(e.target.value)} placeholder="Dr …" /></label>
+        <label className="champ"><span>Anesthésie</span>
+          <select className="saisie" value={f.anesthesie || ''} onChange={e => maj('anesthesie')(e.target.value)}>{ANESTHESIES.map(a => <option key={a}>{a}</option>)}</select>
+        </label>
+        <label className="champ"><span>Séjour</span>
+          <select className="saisie" value={f.sejour || ''} onChange={e => maj('sejour')(e.target.value)}>{SEJOURS.map(s => <option key={s}>{s}</option>)}</select>
+        </label>
       </div>
       <div style={{ display: 'grid', gap: 2 }}>
         {[['consentement_signe', "Consentement éclairé à l'intervention signé"], ['consentement_anesthesie', "Consentement d'anesthésie signé"], ['jeun_verifie', 'Jeûne vérifié le jour J']].map(([k, l]) => (
@@ -123,7 +131,7 @@ export default function FicheOperation() {
 
       <div className="rangee-btn">
         <button type="button" className="btn" onClick={() => imprimerLivret(donnees)}>Livret « Mon opération »</button>
-        <button type="button" className="btn" onClick={() => imprimerDossierOperatoire(donnees)}>Dossier opératoire à signer</button>
+        <ChoixDossierOp key={op.id + op.sejour + op.anesthesie} donnees={donnees} />
         <Link to="/medecin/bloc" className="btn-lien bleu" style={{ alignSelf: 'center' }}>← BLOC DU JOUR</Link>
       </div>
       <Message type="succes">{msg.succes}</Message>

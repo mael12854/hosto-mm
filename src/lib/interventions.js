@@ -2,6 +2,7 @@
 // Chaque fiche remplit le livret « Mon opération » (src/lib/livret.js) et propose
 // des valeurs par défaut à la programmation (anesthésie, durée, séjour, côté).
 // Textes destinés aux patients et à leurs parents : phrases courtes, sans jargon.
+// implant : pose d'un dispositif médical implantable (traçabilité obligatoire au dossier).
 
 export const ANESTHESIES = ['Générale', 'Locorégionale', 'Locale', 'Sédation']
 export const COTES = ['Droit', 'Gauche', 'Bilatéral', 'Sans objet']
@@ -68,13 +69,22 @@ export const INTERVENTIONS = [
     controle: 'Consultation de contrôle 1 mois après',
   },
   {
-    code: 'aerateurs', nom: 'Aérateurs transtympaniques (yoyos)', service: 'Pédiatrie', anesthesie: 'Générale', cote: true, duree: 20, sejour: 'Ambulatoire (sortie le jour même)',
+    code: 'aerateurs', nom: 'Aérateurs transtympaniques (yoyos)', service: 'Pédiatrie', anesthesie: 'Générale', cote: true, implant: true, duree: 20, sejour: 'Ambulatoire (sortie le jour même)',
     description: "On pose un tout petit tube dans le tympan pour aérer l'oreille et éviter que du liquide reste derrière (otites à répétition, baisse d'audition).",
     preparation: [],
     apres: ['Un peu d\'écoulement par l\'oreille les premiers jours, parfois teinté de sang.', 'Protéger les oreilles de l\'eau (bouchons) au bain et à la piscine selon l\'avis du médecin.', 'Le yoyo tombe tout seul en général au bout de 6 à 18 mois.'],
     alerte: ['Écoulement abondant ou malodorant de l\'oreille', 'Douleur forte de l\'oreille'],
     reprise: { ecole: 'Le lendemain', sport: 'Piscine avec bouchons, selon avis' },
     controle: 'Consultation de contrôle 1 à 2 mois après',
+  },
+  {
+    code: 'ablation_att', nom: 'Ablation des aérateurs transtympaniques (ATT)', service: 'Pédiatrie', anesthesie: 'Générale', cote: true, duree: 15, sejour: 'Ambulatoire (sortie le jour même)',
+    description: "Les yoyos posés dans les tympans ne sont pas tombés tout seuls, sont bouchés ou ne servent plus. On les retire pendant une anesthésie très courte au masque ; si le petit trou du tympan reste ouvert, on peut le refermer avec une petite greffe (myringoplastie).",
+    preparation: ["Signaler tout écoulement d'oreille dans la semaine avant."],
+    apres: ["Petit écoulement possible par l'oreille pendant 1 à 2 jours, parfois teinté de sang.", "Protéger l'oreille de l'eau jusqu'au contrôle : le trou du tympan doit se refermer.", 'Douleur faible : paracétamol si besoin.'],
+    alerte: ["Écoulement de pus, fièvre, douleur forte de l'oreille", "Baisse d'audition qui ne revient pas"],
+    reprise: { ecole: 'Le lendemain', sport: "Piscine et plongeon interdits jusqu'au contrôle" },
+    controle: 'Consultation avec audiogramme 1 à 2 mois après',
   },
   {
     code: 'hernie_inguinale', nom: 'Cure de hernie inguinale', service: 'Pédiatrie', anesthesie: 'Générale', cote: true, duree: 45, sejour: 'Ambulatoire (sortie le jour même)',
@@ -113,7 +123,7 @@ export const INTERVENTIONS = [
     controle: 'Radio et consultation de contrôle à J7, puis à l\'ablation du plâtre',
   },
   {
-    code: 'osteosynthese', nom: 'Ostéosynthèse (broches, vis ou plaque)', service: 'Orthopédie', anesthesie: 'Générale', cote: true, duree: 75, sejour: '1 nuit',
+    code: 'osteosynthese', nom: 'Ostéosynthèse (broches, vis ou plaque)', service: 'Orthopédie', anesthesie: 'Générale', cote: true, implant: true, duree: 75, sejour: '1 nuit',
     description: "Pour réparer un os cassé qui ne tient pas en place avec un plâtre seul, on le fixe avec du matériel (broches, vis ou plaque), souvent retiré plus tard.",
     preparation: [],
     apres: ['Membre surélevé et glace (dans un linge) pour limiter le gonflement.', 'Pansement à refaire selon l\'ordonnance infirmière.', 'Antidouleurs à prendre régulièrement les premiers jours, sans attendre d\'avoir très mal.'],

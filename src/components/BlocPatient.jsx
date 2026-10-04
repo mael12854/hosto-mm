@@ -7,7 +7,8 @@ import { useSites } from '../lib/sites.jsx'
 import { supabase, journaliser, messageErreur } from '../lib/supabase.js'
 import { dateHeure, heure, nomComplet, nomMedecin } from '../lib/format.js'
 import { imprimerLivret } from '../lib/livret.js'
-import { estMineur, imprimerDossierOperatoire } from '../lib/dossierOperatoire.js'
+import { estMineur } from '../lib/dossierOperatoire.js'
+import ChoixDossierOp from './ChoixDossierOp.jsx'
 
 const ONGLETS = ['Check-list', 'Horaires', 'Réveil']
 
@@ -50,7 +51,7 @@ export default function BlocPatient({ patient }) {
       </div>
       <div className="rangee-btn">
         <button type="button" className="btn" onClick={() => imprimerLivret(donnees)}>Livret « Mon opération »</button>
-        <button type="button" className="btn" onClick={() => imprimerDossierOperatoire(donnees)}>Dossier opératoire</button>
+        <ChoixDossierOp key={op.id} donnees={donnees} />
       </div>
       <div role="tablist" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {ONGLETS.map(o => <button key={o} type="button" role="tab" aria-selected={o === onglet} className={'btn-puce' + (o === onglet ? ' actif' : '')} onClick={() => setOnglet(o)}>{o}</button>)}
