@@ -10,7 +10,7 @@ import { imprimer } from './impression.js'
 
 const BLEU = '#1D5C74', ROUGE = '#A8331F', GRIS = '#656C71', FILET = '#D8D2C6', PAPIER = '#F4F1EA'
 
-const STYLE = `
+export const STYLE_DOSSIER = `
 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{margin:0;font-family:'Source Sans 3',sans-serif;color:#1E262B;font-size:10.5pt;line-height:1.4}
 .page{page-break-after:always;break-after:page;display:flex;flex-direction:column;gap:2.6mm;min-height:268mm}
@@ -52,16 +52,20 @@ td.c{text-align:center;width:11mm}
 footer{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:7.5pt;color:${GRIS};border-top:0.25mm solid ${FILET};padding-top:1.5mm}
 `
 
-const boite = ok => `<span class="boite">${ok ? '✓' : ''}</span>`
-const coches = items => `<div class="coche">${items.map(t => `<div>${boite(false)}<span class="lg">${t}</span></div>`).join('')}</div>`
+export const boite = ok => `<span class="boite">${ok ? '✓' : ''}</span>`
+export const coches = items => `<div class="coche">${items.map(t => `<div>${boite(false)}<span class="lg">${t}</span></div>`).join('')}</div>`
 const ouiNon = (lignes, cols = ['Oui', 'Non']) => `<table class="serre"><thead><tr><th></th>${cols.map(c => `<th class="c">${c}</th>`).join('')}<th>Précisions</th></tr></thead><tbody>
 ${lignes.map(l => `<tr><td>${l}</td>${cols.map(() => `<td class="c">${boite(false)}</td>`).join('')}<td></td></tr>`).join('')}</tbody></table>`
 const vides = (n, cols) => ('<tr>' + '<td></td>'.repeat(cols) + '</tr>').repeat(n)
-const champ = (k, v = '', style = '') => `<div class="case"><div class="k">${k}</div><div class="v"${style ? ` style="${style}"` : ''}>${v}</div></div>`
-const fait = () => `<div class="fait"><span>Fait à</span><span>le</span></div>`
+export const champ = (k, v = '', style = '') => `<div class="case"><div class="k">${k}</div><div class="v"${style ? ` style="${style}"` : ''}>${v}</div></div>`
+const TIRETS = '……………………………'
+/** Date et heure, ou pointillés à remplir (papiers vierges). */
+const dh = d => (d ? dateHeure(d) : '…… / …… · …… h ……')
+const dd = d => (d ? date(d) : '…… / …… / ……')
+export const fait = () => `<div class="fait"><span>Fait à</span><span>le</span></div>`
 
 /** Case de signature ; court : nom + signature seulement (pages chargées). */
-function signature(role, nom = '', court = false) {
+export function signature(role, nom = '', court = false) {
   if (court) return `<div class="sig court"><div class="r">${esc(role)}</div><div class="l">${esc(nom || '')}</div><div class="zone"></div></div>`
   return `<div class="sig"><div class="r">${esc(role)}</div><div class="k">Nom et prénom</div><div class="l">${esc(nom || '')}</div>
 <div class="k">Date et heure</div><div class="l"></div><div class="zone"></div></div>`
@@ -79,18 +83,21 @@ function age(naissance, le) {
 export const estMineur = (naissance, le = new Date()) => { const a = age(naissance, le); return a != null && a < 18 }
 
 /** Contexte commun à toutes les pièces. */
-function contexte({ op, patient: p, site, salle, chirurgien, mineur }) {
-  const f = ficheIntervention(op.code_intervention)
+const FICHE_VIERGE = { description: '', apres: [], alerte: [], reprise: { ecole: '', sport: '' }, controle: '', sejour: '', anesthesie: '' }
+
+function contexte({ op, patient: p, site, salle, chirurgien, mineur, vierge }) {
+  const f = vierge ? FICHE_VIERGE : ficheIntervention(op.code_intervention)
   const sejour = op.sejour || f.sejour
   return {
-    op, p, f, site, salle, chirurgien, mineur: !!mineur, sejour,
+    op, p, f, site, salle, chirurgien, mineur: !!mineur, sejour: vierge ? '……………………' : sejour,
     ambu: /^ambulatoire/i.test(sejour), age: age(p.date_naissance, op.debut),
     nom: `${p.prenom || ''} ${p.nom || ''}`.trim(),
-    cote: op.cote && op.cote !== 'Sans objet' ? op.cote : 'Sans objet',
+    cote: vierge ? '……………' : op.cote && op.cote !== 'Sans objet' ? op.cote : 'Sans objet',
     anesthesie: op.anesthesie || f.anesthesie,
-    j: horairesJeun(op.debut), heures: op.heures || {}, ch: op.compte_rendu || {},
+    j: op.debut ? horairesJeun(op.debut) : { arrivee: null, solides: null, laitMaternel: null, liquides: null },
+    heures: op.heures || {}, ch: op.compte_rendu || {}, vierge: !!vierge,
     adresse: [p.adresse, p.complement_adresse, [p.code_postal, p.ville].filter(Boolean).join(' ')].filter(Boolean).join(', '),
-    representant: mineur ? 'Représentant légal' : 'Patient',
+    representant: vierge ? 'Patient ou représentant légal' : mineur ? 'Représentant légal' : 'Patient',
   }
 }
 
@@ -155,12 +162,12 @@ export function piecesDossier(d) {
 const CORPS = {
   garde: (c, liste) => `
     <div class="grille">
-      ${champ('Intervention', `<strong>${esc(c.op.intervention)}</strong>`)}${champ('Côté', `<strong>${esc(c.cote)}</strong>`)}${champ('Anesthésie', esc(c.anesthesie))}
-      ${champ('Date et heure', esc(dateHeure(c.op.debut)))}${champ('Durée prévue', `${Math.round((new Date(c.op.fin) - new Date(c.op.debut)) / 60000)} min`)}${champ('Séjour', esc(c.sejour))}
+      ${champ('Intervention', `<strong>${esc(c.op.intervention || TIRETS)}</strong>`)}${champ('Côté', `<strong>${esc(c.cote)}</strong>`)}${champ('Anesthésie', esc(c.anesthesie))}
+      ${champ('Date et heure', esc(dh(c.op.debut)))}${champ('Durée prévue', `${c.op.debut ? `${Math.round((new Date(c.op.fin) - new Date(c.op.debut)) / 60000)} min` : ''}`)}${champ('Séjour', esc(c.sejour))}
       ${champ('Site · salle', `${esc(c.site?.nom || '—')} · ${esc(c.salle?.nom || '—')}`)}${champ('Chirurgien', esc(c.chirurgien || '—'))}${champ('Anesthésiste', esc(c.op.anesthesiste || ''))}
       ${champ('Service', esc(c.p.service || '—'))}${champ('Âge · sexe · groupe', `${c.age != null ? `${c.age} ans` : '—'} · ${esc(c.p.sexe === 'F' ? 'F' : c.p.sexe === 'M' ? 'M' : '—')} · ${esc(c.p.groupe_sanguin || '—')}`)}${champ('Équipe', esc(c.op.equipe || ''))}
     </div>
-    <div class="alerte"><div class="k">Allergies</div><div class="v">${esc(c.p.allergies || 'Aucune connue — à vérifier')}</div></div>
+    <div class="alerte"><div class="k">Allergies</div><div class="v">${esc(c.p.allergies || (c.vierge ? '' : 'Aucune connue — à vérifier'))}</div></div>
     <div class="grille deux">
       ${champ('Antécédents', esc(c.p.antecedents || ''), 'white-space:pre-wrap')}${champ('Traitement en cours', esc(c.p.traitement_en_cours || ''), 'white-space:pre-wrap')}
       ${champ('Personne à prévenir', esc([c.p.contact_urgence_nom, c.p.contact_urgence_lien && `(${c.p.contact_urgence_lien})`, c.p.contact_urgence_telephone].filter(Boolean).join(' ')))}${champ('Médecin traitant', esc(c.p.medecin_traitant || ''))}
@@ -193,14 +200,14 @@ const CORPS = {
 
   consentement: c => `
     <p>Je soussigné(e), patient ou représentant légal du patient, déclare avoir été informé(e) par le Dr <strong>${esc(c.chirurgien || '……………………')}</strong>,
-    au cours d'une consultation, de l'intervention prévue : <strong>${esc(c.op.intervention)}</strong>${c.cote !== 'Sans objet' ? `, côté <strong>${esc(c.cote.toLowerCase())}</strong>` : ''}.</p>
-    <p>${esc(c.f.description)}</p>
+    au cours d'une consultation, de l'intervention prévue : <strong>${esc(c.op.intervention || TIRETS)}</strong>${c.cote !== 'Sans objet' ? `, côté <strong>${esc(c.cote.toLowerCase())}</strong>` : ''}.</p>
+    ${c.vierge ? `<div class="lignes"><div></div><div></div></div>` : `<p>${esc(c.f.description)}</p>`}
     <h2>J'ai été informé(e)</h2>
     <ul>
       <li>du but de l'intervention, de son déroulement et de sa durée prévisible ;</li>
       <li>des bénéfices attendus et des autres traitements possibles ;</li>
       <li>des risques fréquents et des risques graves, même rares (infection, saignement, cicatrice, complications liées à l'anesthésie) ;</li>
-      <li>des suites habituelles : ${esc(c.f.apres.slice(0, 2).map(t => t.charAt(0).toLowerCase() + t.slice(1).replace(/\.$/, '')).join(' ; '))} ;</li>
+      <li>des suites habituelles${c.vierge ? ' ;' : ` : ${esc(c.f.apres.slice(0, 2).map(t => t.charAt(0).toLowerCase() + t.slice(1).replace(/\.$/, '')).join(' ; '))} ;`}</li>
       <li>${c.ambu ? 'des conditions de la chirurgie ambulatoire : sortie le jour même si tout va bien, accompagnant obligatoire, possibilité de rester une nuit si besoin ;' : `de la durée prévisible d'hospitalisation : ${esc(c.sejour)} ;`}</li>
       <li>de la possibilité qu'une découverte pendant l'opération nécessite un geste complémentaire indispensable.</li>
     </ul>
@@ -213,21 +220,21 @@ const CORPS = {
 
   anesthesie: c => `
     <div class="grille">
-      ${champ('Consultation le', esc(date(c.op.consult_anesthesie_le) || ''))}${champ('Anesthésiste', esc(c.op.anesthesiste || ''))}${champ("Type d'anesthésie prévu", esc(c.anesthesie))}
+      ${champ('Consultation le', esc(dd(c.op.consult_anesthesie_le) || ''))}${champ('Anesthésiste', esc(c.op.anesthesiste || ''))}${champ("Type d'anesthésie prévu", esc(c.anesthesie))}
       ${champ('Score ASA', c.op.asa ? `ASA ${c.op.asa}` : '1 · 2 · 3 · 4')}${champ('Poids · taille')}${champ('Intubation difficile prévisible', `${boite(false)} non  ${boite(false)} oui`)}
     </div>
     <div class="alerte"><div class="k">Allergies</div><div class="v">${esc(c.p.allergies || '')}</div></div>
     <div class="grille deux">${champ('Antécédents anesthésiques')}${champ('Traitement à poursuivre ou arrêter', esc(c.p.traitement_en_cours || ''))}</div>
     <h2>Jeûne prescrit</h2>
-    <table><tr><td>Solides, lait non maternel</td><td>jusqu'à ${esc(dateHeure(c.j.solides))}</td></tr><tr><td>Lait maternel</td><td>jusqu'à ${esc(dateHeure(c.j.laitMaternel))}</td></tr><tr><td>Liquides clairs</td><td>jusqu'à ${esc(dateHeure(c.j.liquides))}</td></tr></table>
+    <table><tr><td>Solides, lait non maternel</td><td>jusqu'à ${esc(dh(c.j.solides))}</td></tr><tr><td>Lait maternel</td><td>jusqu'à ${esc(dh(c.j.laitMaternel))}</td></tr><tr><td>Liquides clairs</td><td>jusqu'à ${esc(dh(c.j.liquides))}</td></tr></table>
     <h2>Prémédication</h2><div class="lignes"><div></div><div></div></div>
     <p>J'ai été informé(e) du type d'anesthésie, de ses bénéfices et de ses risques, et des consignes de jeûne. J'ai pu poser mes questions. J'accepte l'anesthésie proposée et, si besoin, son adaptation par l'anesthésiste pendant l'intervention.</p>
     ${fait()}
     <div class="sigs">${signature(c.representant, c.mineur ? '' : c.nom)}${signature('Médecin anesthésiste', c.op.anesthesiste)}</div>`,
 
   mineur: c => `
-    <p>Nous soussignés, titulaires de l'autorité parentale sur l'enfant <strong>${esc(c.nom)}</strong>, né(e) le <strong>${esc(date(c.p.date_naissance) || '……')}</strong>,
-    autorisons l'équipe de l'Hôpital M&amp;M à pratiquer l'intervention <strong>${esc(c.op.intervention)}</strong> ainsi que l'anesthésie nécessaire,
+    <p>Nous soussignés, titulaires de l'autorité parentale sur l'enfant <strong>${esc(c.nom || TIRETS)}</strong>, né(e) le <strong>${esc(dd(c.p.date_naissance) || '……')}</strong>,
+    autorisons l'équipe de l'Hôpital M&amp;M à pratiquer l'intervention <strong>${esc(c.op.intervention || TIRETS)}</strong> ainsi que l'anesthésie nécessaire,
     et tout acte médical ou chirurgical urgent que son état rendrait indispensable.</p>
     ${['Parent / représentant légal 1', 'Parent / représentant légal 2'].map(t => `<h2>${t}</h2>
     <div class="grille">${champ('Nom et prénom')}${champ("Lien avec l'enfant")}${champ('Téléphone')}</div>
@@ -250,9 +257,9 @@ const CORPS = {
   charte_ambu: c => `
     <p>La chirurgie ambulatoire permet de rentrer chez soi le jour même. Pour qu'elle se passe en toute sécurité, ${c.mineur ? 'les parents s\'engagent' : 'je m\'engage'} à respecter ces règles :</p>
     ${coches([
-      `Respecter le jeûne : dernier repas avant ${esc(dateHeure(c.j.solides))}, dernière boisson claire avant ${esc(dateHeure(c.j.liquides))}`,
+      `Respecter le jeûne : dernier repas avant ${esc(dh(c.j.solides))}, dernière boisson claire avant ${esc(dh(c.j.liquides))}`,
       'Prendre la douche pré-opératoire la veille et le matin, venir sans bijoux ni vernis',
-      `Arriver à ${esc(dateHeure(c.j.arrivee))} et prévenir en cas de retard, de fièvre ou d'empêchement`,
+      `Arriver à ${esc(dh(c.j.arrivee))} et prévenir en cas de retard, de fièvre ou d'empêchement`,
       `Être raccompagné(e) par un adulte${c.mineur && (c.age ?? 18) < 10 ? ' (deux adultes en voiture : un qui conduit, un qui surveille l\'enfant)' : ''} ; pas de transport en commun seul(e)`,
       'Ne pas rester seul(e) la première nuit ; un adulte reste présent jusqu\'au lendemain',
       ...(c.mineur ? ['Surveiller l\'enfant au retour : jeux calmes, pas de vélo ni de trottinette le jour même'] : ['Ne pas conduire, ne pas utiliser de machine, ne pas prendre de décision importante pendant 24 heures', 'Pas d\'alcool ni de somnifère pendant 24 heures']),
@@ -271,8 +278,8 @@ const CORPS = {
     ${coches(['Joint(e) au 1er appel', 'Joint(e) après plusieurs appels — heures :', 'Non joint(e) : message laissé, médecin prévenu'])}
     <h2>Points vérifiés</h2>
     ${ouiNon([
-      `Heure d'arrivée confirmée : ${esc(dateHeure(c.j.arrivee))}, ${esc(c.site ? siteDe(c.site.nom) : '')}`,
-      `Jeûne compris (solides avant ${esc(dateHeure(c.j.solides))}, liquides clairs avant ${esc(dateHeure(c.j.liquides))})`,
+      `Heure d'arrivée confirmée : ${esc(dh(c.j.arrivee))}, ${esc(c.site ? siteDe(c.site.nom) : '')}`,
+      `Jeûne compris (solides avant ${esc(dh(c.j.solides))}, liquides clairs avant ${esc(dh(c.j.liquides))})`,
       'Douche pré-opératoire expliquée',
       'Pas de fièvre, rhume, toux, maladie contagieuse',
       'Traitements habituels : à prendre ou arrêter selon consignes',
@@ -297,7 +304,7 @@ const CORPS = {
     <div class="sigs">${signature(c.representant, c.mineur ? '' : c.nom)}${signature('Soignant ayant fait l\'inventaire')}</div>`,
 
   parent_nuit: c => `
-    <p>Un parent peut rester auprès de <strong>${esc(c.nom)}</strong> pendant son hospitalisation, y compris la nuit, sur un lit d'accompagnant dans la chambre.</p>
+    <p>Un parent peut rester auprès de <strong>${esc(c.nom || TIRETS)}</strong> pendant son hospitalisation, y compris la nuit, sur un lit d'accompagnant dans la chambre.</p>
     <h2>Parent accompagnant</h2>
     <div class="grille">${champ('Nom et prénom')}${champ("Lien avec l'enfant")}${champ('Téléphone')}</div>
     <div class="grille">${champ('Nuits du')}${champ('au')}${champ('Repas accompagnant', `${boite(false)} oui  ${boite(false)} non`)}</div>
@@ -333,7 +340,7 @@ const CORPS = {
     <div class="sigs">${signature('Médecin anesthésiste', c.op.anesthesiste)}${signature('Infirmier(e)')}</div>`,
 
   marquage: c => `
-    <div class="alerte"><div class="k">Côté à opérer</div><div class="v" style="font-size:16pt">${esc(c.cote.toUpperCase())} · ${esc(c.op.intervention)}</div></div>
+    <div class="alerte"><div class="k">Côté à opérer</div><div class="v" style="font-size:16pt">${esc(c.cote.toUpperCase())} · ${esc(c.op.intervention || TIRETS)}</div></div>
     <p>Le site opératoire est marqué sur la peau au feutre indélébile par le chirurgien, ${c.mineur ? 'en présence d\'un parent' : 'patient réveillé et participant'}, avant la prémédication. La marque doit rester visible après la préparation cutanée.</p>
     ${silhouette(c.cote)}
     <p class="petit">Vue de face : la droite du patient est à gauche du dessin. Entourer précisément la zone marquée.</p>
@@ -346,7 +353,7 @@ const CORPS = {
 
   preparation: c => `
     <table><thead><tr><th>Vérification</th><th class="c">Oui</th><th class="c">Non</th><th>Heure · remarque</th></tr></thead><tbody>
-    ${['Douche pré-opératoire la veille', 'Douche pré-opératoire le matin', `Jeûne respecté (solides avant ${esc(dateHeure(c.j.solides))})`, 'Bijoux, piercings, vernis, maquillage retirés', 'Lentilles, lunettes, appareil dentaire ou auditif retirés', "Bracelet d'identification posé et vérifié", `Site opératoire marqué (côté : ${esc(c.cote)})`, 'Prémédication donnée', 'Vessie vidée', 'Tenue de bloc', 'Consentements signés présents', 'Dossier, imagerie et bilan sanguin joints', 'Constantes prises (T°, FC, TA, SpO₂, poids)']
+    ${['Douche pré-opératoire la veille', 'Douche pré-opératoire le matin', `Jeûne respecté (solides avant ${esc(dh(c.j.solides))})`, 'Bijoux, piercings, vernis, maquillage retirés', 'Lentilles, lunettes, appareil dentaire ou auditif retirés', "Bracelet d'identification posé et vérifié", `Site opératoire marqué (côté : ${esc(c.cote)})`, 'Prémédication donnée', 'Vessie vidée', 'Tenue de bloc', 'Consentements signés présents', 'Dossier, imagerie et bilan sanguin joints', 'Constantes prises (T°, FC, TA, SpO₂, poids)']
       .map(t => `<tr><td>${t}</td><td class="c">${boite(false)}</td><td class="c">${boite(false)}</td><td></td></tr>`).join('')}
     </tbody></table>
     <div class="grille">${champ('Départ au bloc à')}${champ('Accompagné par')}${champ(c.mineur ? 'Doudou / parent jusqu\'au bloc' : 'Objet personnel')}</div>
@@ -483,8 +490,8 @@ const CORPS = {
     <div class="sigs">${signature('Médecin autorisant la sortie', c.chirurgien)}${signature(c.mineur ? 'Parent / représentant légal' : 'Patient', c.mineur ? '' : c.nom)}</div>`,
 
   consignes: c => `
-    <div class="encadre"><strong>${esc(c.op.intervention)}</strong> du ${esc(date(c.op.debut))} · ${esc(c.site ? siteDe(c.site.nom) : '')}</div>
-    <h2>Après l'opération</h2><ul>${c.f.apres.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+    <div class="encadre"><strong>${esc(c.op.intervention || TIRETS)}</strong> du ${esc(dd(c.op.debut))} · ${esc(c.site ? siteDe(c.site.nom) : '')}</div>
+    <h2>Après l'opération</h2>${c.vierge ? `<div class="lignes">${'<div></div>'.repeat(6)}</div>` : `<ul>${c.f.apres.map(t => `<li>${esc(t)}</li>`).join('')}</ul>`}
     ${c.op.consignes_sortie ? `<h2>Consignes du médecin</h2><p style="white-space:pre-wrap">${esc(c.op.consignes_sortie)}</p>` : ''}
     <div class="grille">${champ("Retour à l'école / au travail", esc(c.f.reprise.ecole))}${champ('Sport', esc(c.f.reprise.sport))}${champ('Contrôle', esc(c.f.controle))}</div>
     <div class="grille deux">${champ('Rendez-vous de contrôle le')}${champ('Avec')}</div>
@@ -507,8 +514,8 @@ const CORPS = {
   lettre: c => `
     <div class="grille deux">${champ('Destinataire', esc(c.p.medecin_traitant || 'Médecin traitant'))}${champ('Copie')}</div>
     <p>Cher confrère,</p>
-    <p>Votre patient(e) <strong>${esc(c.nom)}</strong>${c.age != null ? `, ${c.age} ans,` : ''} a été opéré(e) le <strong>${esc(date(c.op.debut))}</strong> à l'Hôpital M&amp;M (${esc(c.site ? siteDe(c.site.nom) : '')}) :
-    <strong>${esc(c.op.intervention)}</strong>${c.cote !== 'Sans objet' ? `, côté ${esc(c.cote.toLowerCase())}` : ''}, sous anesthésie ${esc(c.anesthesie.toLowerCase())}, en ${c.ambu ? 'ambulatoire' : `hospitalisation (${esc(c.sejour)})`}.</p>
+    <p>Votre patient(e) <strong>${esc(c.nom || TIRETS)}</strong>${c.age != null ? `, ${c.age} ans,` : ''} a été opéré(e) le <strong>${esc(dd(c.op.debut))}</strong> à l'Hôpital M&amp;M (${esc(c.site ? siteDe(c.site.nom) : '')}) :
+    <strong>${esc(c.op.intervention || TIRETS)}</strong>${c.cote !== 'Sans objet' ? `, côté ${esc(c.cote.toLowerCase())}` : ''}, sous anesthésie ${esc(c.anesthesie.toLowerCase())}, en ${c.ambu ? 'ambulatoire' : `hospitalisation (${esc(c.sejour)})`}.</p>
     ${champ('Geste réalisé', esc(c.ch.geste || ''), 'white-space:pre-wrap;min-height:12mm')}
     ${champ('Suites opératoires', '', 'min-height:12mm')}
     ${champ('Traitement de sortie', '', 'min-height:14mm')}
@@ -519,18 +526,18 @@ const CORPS = {
 
   certificats: c => c.mineur ? `
     <h2>Certificat médical d'absence scolaire</h2>
-    <p>Je soussigné(e), Dr <strong>${esc(c.chirurgien || '……………')}</strong>, certifie que l'état de santé de l'enfant <strong>${esc(c.nom)}</strong>, né(e) le ${esc(date(c.p.date_naissance) || '……')}, opéré(e) le ${esc(date(c.op.debut))},
+    <p>Je soussigné(e), Dr <strong>${esc(c.chirurgien || '……………')}</strong>, certifie que l'état de santé de l'enfant <strong>${esc(c.nom || TIRETS)}</strong>, né(e) le ${esc(dd(c.p.date_naissance) || '……')}, opéré(e) le ${esc(dd(c.op.debut))},
     nécessite une absence scolaire du <span style="border-bottom:0.25mm solid ${FILET};padding:0 14mm"></span> au <span style="border-bottom:0.25mm solid ${FILET};padding:0 14mm"></span> inclus.</p>
     ${coches(['Dispense de sport et de piscine jusqu\'au :', 'Aménagements au retour (ascenseur, pas de port de cartable, récréation calme) :'])}
     ${fait()}
     <div class="sigs">${signature('Médecin', c.chirurgien, true)}</div>
     <h2>Attestation de présence parentale</h2>
-    <p>Je soussigné(e), certifie que M. / Mme <span style="border-bottom:0.25mm solid ${FILET};padding:0 30mm"></span> a accompagné son enfant <strong>${esc(c.nom)}</strong>, ${c.ambu ? `pris(e) en charge en chirurgie ambulatoire le ${esc(date(c.op.debut))}` : `hospitalisé(e) du ${esc(date(c.op.debut))} au <span style="border-bottom:0.25mm solid ${FILET};padding:0 14mm"></span>`} à l'Hôpital M&amp;M, ${esc(c.site ? `${siteDe(c.site.nom)}, ${adresseSite(c.site)}` : '')}.</p>
+    <p>Je soussigné(e), certifie que M. / Mme <span style="border-bottom:0.25mm solid ${FILET};padding:0 30mm"></span> a accompagné son enfant <strong>${esc(c.nom || TIRETS)}</strong>, ${c.ambu ? `pris(e) en charge en chirurgie ambulatoire le ${esc(dd(c.op.debut))}` : `hospitalisé(e) du ${esc(dd(c.op.debut))} au <span style="border-bottom:0.25mm solid ${FILET};padding:0 14mm"></span>`} à l'Hôpital M&amp;M, ${esc(c.site ? `${siteDe(c.site.nom)}, ${adresseSite(c.site)}` : '')}.</p>
     <p class="petit">Attestation remise à l'intéressé(e) pour faire valoir ce que de droit (employeur, congé de présence parentale).</p>
     ${fait()}
     <div class="sigs">${signature('Médecin ou cadre du service', '', true)}</div>` : `
     <h2>Bulletin de situation · attestation ${c.ambu ? 'de soins' : "d'hospitalisation"}</h2>
-    <p>Je soussigné(e), certifie que <strong>${esc(c.nom)}</strong>, né(e) le ${esc(date(c.p.date_naissance) || '……')}, ${c.ambu ? `a été pris(e) en charge en chirurgie ambulatoire le ${esc(date(c.op.debut))}` : `est hospitalisé(e) depuis le ${esc(date(c.op.debut))}, sortie prévue le <span style="border-bottom:0.25mm solid ${FILET};padding:0 14mm"></span>`} à l'Hôpital M&amp;M, ${esc(c.site ? `${siteDe(c.site.nom)}, ${adresseSite(c.site)}` : '')}.</p>
+    <p>Je soussigné(e), certifie que <strong>${esc(c.nom || TIRETS)}</strong>, né(e) le ${esc(dd(c.p.date_naissance) || '……')}, ${c.ambu ? `a été pris(e) en charge en chirurgie ambulatoire le ${esc(dd(c.op.debut))}` : `est hospitalisé(e) depuis le ${esc(dd(c.op.debut))}, sortie prévue le <span style="border-bottom:0.25mm solid ${FILET};padding:0 14mm"></span>`} à l'Hôpital M&amp;M, ${esc(c.site ? `${siteDe(c.site.nom)}, ${adresseSite(c.site)}` : '')}.</p>
     ${fait()}
     <div class="sigs">${signature('Bureau des admissions', '', true)}</div>
     <h2>Arrêt de travail</h2>
@@ -552,14 +559,22 @@ export function dossierOperatoireHtml(d, codes = null) {
   const total = choisies.length
   const entete = titre => `<header><div><div class="logo">${logoSvgTexte}</div>${c.site ? `<div class="adr">${esc(siteDe(c.site.nom).toUpperCase())} · ${esc(adresseSite(c.site))}</div>` : ''}</div>
 <div class="t"><div class="n">DOSSIER OPÉRATOIRE${c.ambu ? ' · AMBULATOIRE' : ''}</div><h1>${esc(titre)}</h1></div></header>
-<div class="bandeau"><div><div class="k">Patient</div><div class="v"><strong>${esc(c.nom)}</strong></div></div><div><div class="k">Né(e) le</div><div class="v">${esc(date(c.p.date_naissance) || '—')}</div></div>
-<div><div class="k">Dossier · IPP</div><div class="v">${esc(c.p.numero_dossier || '—')} · ${esc(c.p.ipp || '—')}</div></div><div><div class="k">Opération</div><div class="v">${esc(date(c.op.debut))}</div></div></div>`
+<div class="bandeau"><div><div class="k">Patient</div><div class="v"><strong>${esc(c.nom)}</strong></div></div><div><div class="k">Né(e) le</div><div class="v">${esc(c.vierge ? '' : date(c.p.date_naissance) || '—')}</div></div>
+<div><div class="k">Dossier · IPP</div><div class="v">${c.vierge ? '' : `${esc(c.p.numero_dossier || '—')} · ${esc(c.p.ipp || '—')}`}</div></div><div><div class="k">Opération</div><div class="v">${esc(date(c.op.debut))}</div></div></div>`
   return choisies.map(([code, titre], i) => `<section class="page" data-piece="${code}">${entete(titre)}${CORPS[code](c, titres)}
-<footer><span>DOSSIER OPÉRATOIRE · ${esc(c.nom.toUpperCase())} · ${esc(c.p.numero_dossier || '')}</span><span>PIÈCE ${i + 1} / ${total}</span></footer></section>`).join('')
+<footer><span>${['DOSSIER OPÉRATOIRE', c.nom.toUpperCase(), c.p.numero_dossier].filter(Boolean).map(esc).join(' · ')}</span><span>PIÈCE ${i + 1} / ${total}</span></footer></section>`).join('')
 }
 
 /** Ouvre le dossier opératoire prêt à imprimer. */
 export function imprimerDossierOperatoire(d, codes = null) {
   const nom = `${d.patient.prenom || ''} ${d.patient.nom || ''}`.trim()
-  imprimer({ titre: `Dossier opératoire — ${nom}`, corps: dossierOperatoireHtml(d, codes), page: 'A4', marge: '11mm', style: STYLE })
+  imprimer({ titre: `Dossier opératoire — ${nom}`, corps: dossierOperatoireHtml(d, codes), page: 'A4', marge: '11mm', style: STYLE_DOSSIER })
 }
+
+/** Pièces du dossier opératoire en version vierge (sans patient), pour le site choisi. */
+export function dossierViergeHtml(codes, site = null) {
+  return dossierOperatoireHtml({ op: { intervention: '', debut: null, fin: null, checklist: {}, heures: {}, reveil: {} }, patient: {}, site, vierge: true }, codes)
+}
+
+/** Toutes les pièces, pour la page « Papiers vierges ». */
+export const PIECES_VIERGES = PIECES.map(([code, titre, groupe]) => ({ code, titre, groupe }))
