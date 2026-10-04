@@ -6,7 +6,10 @@ import { Chargement, Vide } from '../components/ui.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { supabase } from '../lib/supabase.js'
 import { adresseSite, siteDe, useSites } from '../lib/sites.jsx'
-import { date, dateCourte, dateHeure, nomMedecin } from '../lib/format.js'
+import { imprimerLivret } from '../lib/livret.js'
+import { ficheIntervention, horairesJeun } from '../lib/interventions.js'
+import { statutOp } from '../lib/operations.js'
+import { date, dateCourte, dateHeure, heure, nomMedecin } from '../lib/format.js'
 
 function Bloc({ titre, children }) {
   return <section style={{ display: 'grid', gap: 12 }}><div className="etiquette">{titre}</div>{children}</section>
@@ -27,7 +30,8 @@ export default function EspacePatient() {
       q('rendez_vous').gte('date_heure', new Date().toISOString()).order('date_heure'),
       q('examens_laboratoire').eq('statut', 'disponible').order('date_resultat', { ascending: false }),
       supabase.from('medecins').select('id, nom, prenom'),
-    ]).then(([cr, pr, doc, rdv, ex, med]) => setD({ cr: cr.data || [], pr: pr.data || [], doc: doc.data || [], rdv: rdv.data || [], ex: ex.data || [], med: med.data || [] }))
+      supabase.rpc('mes_operations'),
+    ]).then(([cr, pr, doc, rdv, ex, med, ops]) => setD({ cr: cr.data || [], pr: pr.data || [], doc: doc.data || [], rdv: rdv.data || [], ex: ex.data || [], med: med.data || [], ops: ops.data || [] }))
   }, [p.id])
 
   const medecin = id => nomMedecin(d?.med.find(m => m.id === id))
@@ -79,6 +83,33 @@ export default function EspacePatient() {
                 </div>
               ))}
             </Bloc>
+
+            {d.ops.length > 0 && (
+              <Bloc titre="Mes opérations">
+                {d.ops.map(o => {
+                  const site = sites.parId(o.site_id), aVenir = !['terminée'].includes(o.statut) && new Date(o.fin) > new Date()
+                  const j = horairesJeun(o.debut)
+                  return (
+                    <div key={o.id} style={{ background: '#fff', border: '1px solid var(--filet)', borderLeft: `4px solid ${aVenir ? 'var(--bleu)' : 'var(--vert)'}`, padding: 16, display: 'grid', gap: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--encre)' }}>{o.intervention}{o.cote && o.cote !== 'Sans objet' ? ` · côté ${o.cote.toLowerCase()}` : ''}</span>
+                        <span className="mono" style={{ fontSize: 12, color: 'var(--bleu)' }}>{aVenir ? dateHeure(o.debut) : `${statutOp(o.statut)[1].toUpperCase()} · ${date(o.debut)}`}</span>
+                      </div>
+                      {site && <span style={{ fontSize: 14, color: 'var(--texte)' }}>{siteDe(site.nom).replace(/^s/, 'S')} · {adresseSite(site)}{o.chirurgien ? ` · ${o.chirurgien}` : ''}</span>}
+                      {aVenir && <p style={{ fontSize: 14.5, color: 'var(--texte)' }}>{ficheIntervention(o.code_intervention).description}</p>}
+                      {aVenir && (
+                        <div className="note" style={{ padding: '12px 16px', fontSize: 14.5 }}>
+                          <strong style={{ color: 'var(--encre)' }}>Arrivée à {heure(j.arrivee)}.</strong> Dernier repas avant le {dateHeure(j.solides)} · dernière boisson claire (eau, sirop) avant le {dateHeure(j.liquides)}.
+                          {o.consignes_preop && <div style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{o.consignes_preop}</div>}
+                        </div>
+                      )}
+                      {o.consignes_sortie && <div><div className="etiquette">Consignes de sortie</div><p style={{ fontSize: 14.5, color: 'var(--texte)', whiteSpace: 'pre-wrap' }}>{o.consignes_sortie}</p></div>}
+                      <button type="button" className="btn" style={{ justifySelf: 'start' }} onClick={() => imprimerLivret({ op: o, patient: { ...p, service: p.services?.nom }, site, chirurgien: o.chirurgien })}>Imprimer mon livret « Mon opération »</button>
+                    </div>
+                  )
+                })}
+              </Bloc>
+            )}
 
             <Bloc titre="Mes résultats d'examens">
               {!d.ex.length ? <Vide>Aucun résultat disponible.</Vide> : d.ex.map(x => (

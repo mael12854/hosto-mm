@@ -204,3 +204,18 @@ input[type="datetime-local"].saisie::-webkit-calendar-picker-indicator { cursor:
   .groupe-menu + .groupe-menu { margin-top: 0; }
   .titre-groupe { width: 100%; padding: 6px 12px 0; }
 }
+
+/* ---------- Bloc opératoire ---------- */
+.ligne-check { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--filet); }
+.ligne-check:first-of-type { border-top: 0; }
+.ligne-check input[type="checkbox"], .ligne-check input[type="radio"] { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--bleu); flex: none; }
+.carte-op { background: #fff; border: 1px solid var(--filet); border-left: 4px solid var(--bleu); padding: 12px 14px; display: grid; gap: 6px; color: inherit; }
+.carte-op:hover { border-color: var(--filet-fort); color: inherit; }
+.carte-op .h { font-family: var(--mono); font-size: 13px; color: var(--encre); }
+.carte-op .p { font-size: 15.5px; font-weight: 600; color: var(--encre); }
+.carte-op .i { font-size: 14px; color: var(--texte); }
+.planning { display: grid; gap: 1px; background: var(--filet); border: 1px solid var(--filet); }
+.planning .jour { background: var(--papier); padding: 10px 12px; display: grid; gap: 8px; align-content: start; min-height: 64px; }
+.planning .jour.auj { background: #fff; box-shadow: inset 3px 0 0 var(--bleu); }
+.planning .bloc-op { display: block; background: #fff; border: 1px solid var(--filet); border-left: 3px solid var(--bleu); padding: 6px 8px; font-size: 13.5px; color: var(--encre); }
+.planning .bloc-op.annulee { opacity: 0.55; text-decoration: line-through; }

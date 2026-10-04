@@ -37,11 +37,13 @@ export default function Statistiques() {
   const sites = useSites()
   const [c, setC] = useState(null)
   const [rdv, setRdv] = useState([])
+  const [ops, setOps] = useState([])
 
   useEffect(() => {
     const t = ['prescriptions', 'comptes_rendus', 'documents_officiels', 'constantes_vitales', 'examens_laboratoire', 'lits']
     Promise.all(t.map(x => supabase.from(x).select('*', { count: 'exact', head: true }))).then(r => setC(Object.fromEntries(t.map((x, i) => [x, r[i].count ?? 0]))))
     supabase.from('rendez_vous').select('site_id').then(({ data }) => setRdv(data || []))
+    supabase.from('operations').select('site_id, intervention, statut').neq('statut', 'annulée').then(({ data }) => setOps(data || []))
   }, [])
 
   if (chargement || !c) return <><EnTeteOutil titre="Statistiques" /><Chargement /></>
@@ -70,6 +72,8 @@ export default function Statistiques() {
         {parSite('Séjours par site', sejours)}
         {parSite('Hospitalisés en ce moment, par site', enCours.map(p => p.sejour))}
         {parSite('Rendez-vous par site', rdv)}
+        {parSite('Opérations par site', ops)}
+        {ops.length > 0 && <Barres titre="Interventions les plus fréquentes" donnees={Object.entries(ops.reduce((a, o) => ({ ...a, [o.intervention]: (a[o.intervention] || 0) + 1 }), {})).sort((a, b) => b[1] - a[1]).slice(0, 8)} />}
       </div>
     </>
   )

@@ -42,6 +42,7 @@ export default function TableauDeBord() {
   const sites = useSites()
   const [constantes, setConstantes] = useState({})
   const [rdvJour, setRdvJour] = useState(null)
+  const [opsJour, setOpsJour] = useState([])
 
   // Rendez-vous prévus aujourd'hui (minuit à minuit, heure locale).
   const chargerRdv = useCallback(async () => {
@@ -52,6 +53,11 @@ export default function TableauDeBord() {
     setRdvJour(data || [])
   }, [])
   useEffect(() => { chargerRdv() }, [chargerRdv])
+  useEffect(() => {
+    const debut = new Date(); debut.setHours(0, 0, 0, 0)
+    const fin = new Date(debut); fin.setDate(fin.getDate() + 1)
+    supabase.from('operations').select('id, site_id, statut').neq('statut', 'annulée').gte('debut', debut.toISOString()).lt('debut', fin.toISOString()).then(({ data }) => setOpsJour(data || []))
+  }, [])
 
   const terminer = async r => {
     const { error } = await supabase.from('rendez_vous').update({ statut: 'terminé' }).eq('id', r.id)
@@ -90,6 +96,7 @@ export default function TableauDeBord() {
           ['Urgences', presents.filter(p => statut(p.sejour).cle === 'urgence').length, 'Triage P1 – P2'],
           ['À surveiller', presents.filter(p => statut(p.sejour).cle === 'surveiller').length, 'Triage P3'],
           ['Rendez-vous', rdvIci?.length ?? '…', "Aujourd'hui"],
+          ['Bloc', sites.filtrer(opsJour).length, `Opération${sites.filtrer(opsJour).length > 1 ? 's' : ''} aujourd'hui${sites.filtrer(opsJour).some(o => o.statut === 'au_bloc') ? ` · ${sites.filtrer(opsJour).filter(o => o.statut === 'au_bloc').length} au bloc` : ''}`],
         ].map(([k, v, t]) => (
           <div key={k} style={{ background: 'var(--papier)', padding: '22px 24px' }}>
             <div className="etiquette">{k}</div>

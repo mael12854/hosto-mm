@@ -15,6 +15,10 @@ import CompteRendu from './pages/medecin/CompteRendu.jsx'
 import RendezVous from './pages/medecin/RendezVous.jsx'
 import NouveauPatient from './pages/medecin/NouveauPatient.jsx'
 import Admissions from './pages/medecin/Admissions.jsx'
+import BlocDuJour from './pages/medecin/BlocDuJour.jsx'
+import PlanningBloc from './pages/medecin/PlanningBloc.jsx'
+import ProgrammerOperation from './pages/medecin/ProgrammerOperation.jsx'
+import FicheOperation from './pages/medecin/FicheOperation.jsx'
 import Examens from './pages/medecin/Examens.jsx'
 import Messages from './pages/medecin/Messages.jsx'
 import FileUrgences from './pages/medecin/FileUrgences.jsx'
@@ -60,6 +64,10 @@ export default function App() {
         <Route path="entree-sortie" element={<EntreeSortie />} />
         <Route path="nouveau-patient" element={<NouveauPatient />} />
         <Route path="admissions" element={<Admissions />} />
+        <Route path="bloc" element={<BlocDuJour />} />
+        <Route path="bloc/planning" element={<PlanningBloc />} />
+        <Route path="bloc/programmer" element={<ProgrammerOperation />} />
+        <Route path="bloc/:id" element={<FicheOperation />} />
         <Route path="rendez-vous" element={<RendezVous />} />
         <Route path="bracelets" element={<Bracelets />} />
         <Route path="scanner" element={<Scanner />} />

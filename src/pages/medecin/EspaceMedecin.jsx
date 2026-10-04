@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase.js'
 const GROUPES = [
   ['Accueil', [['', 'Tableau de bord'], ['dossier', 'Dossier patient'], ['nouveau-patient', 'Nouveau patient'], ['messages', 'Messages']]],
   ['Soins', [['file-attente', "File d'attente"], ['admissions', 'Admissions'], ['rendez-vous', 'Rendez-vous'], ['examens', 'Examens']]],
+  ['Bloc opératoire', [['bloc', 'Bloc du jour'], ['bloc/planning', 'Planning du bloc'], ['bloc/programmer', 'Programmer une opération']]],
   ['Documents', [['ordonnance', 'Ordonnance'], ['compte-rendu', 'Compte-rendu'], ['entree-sortie', 'Entrée / Sortie'], ['editeur', 'Éditeur libre']]],
   ['Outils', [['bracelets', 'Bracelets'], ['scanner', 'Scanner'], ['affiches', 'Affiches'], ['lits', 'Lits']]],
   ['Gestion', [['journal', 'Journal'], ['personnel', 'Personnel'], ['statistiques', 'Statistiques']]],
@@ -45,7 +46,7 @@ export default function EspaceMedecin() {
                 <div key={groupe} className="groupe-menu">
                   <div className="titre-groupe">{groupe}</div>
                   {outils.map(([chemin, libelle]) => (
-                    <NavLink key={chemin} to={chemin ? `/medecin/${chemin}` : '/medecin'} end={!chemin}>
+                    <NavLink key={chemin} to={chemin ? `/medecin/${chemin}` : '/medecin'} end>
                       {libelle}{chemin === 'messages' && nonLus > 0 && <span className="pastille" aria-label={`${nonLus} non lus`}>{nonLus}</span>}
                     </NavLink>
                   ))}

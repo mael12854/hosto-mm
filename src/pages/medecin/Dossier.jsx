@@ -7,10 +7,11 @@ import { BadgeSejour, Chargement, EnTeteOutil, Message, SelecteurPatient, Vide }
 import { useAuth } from '../../lib/auth.jsx'
 import { usePatients } from '../../lib/patients.jsx'
 import { useSites } from '../../lib/sites.jsx'
+import { BadgeOp } from '../../components/Operation.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { date, dateHeure, nomComplet, nomMedecin } from '../../lib/format.js'
 
-const ONGLETS = ['Résumé', 'Constantes', 'Médicaments donnés', 'Documents', 'Examens', 'Rendez-vous', 'Carnet de santé']
+const ONGLETS = ['Résumé', 'Constantes', 'Médicaments donnés', 'Documents', 'Examens', 'Opérations', 'Rendez-vous', 'Carnet de santé']
 
 function Ligne({ titre, meta, children }) {
   return (
@@ -108,7 +109,7 @@ export default function Dossier() {
   const charger = useCallback(async () => {
     if (!patientId) return
     const q = t => supabase.from(t).select('*').eq('patient_id', patientId)
-    const [cst, adm, pr, cr, doc, ex, rdv, med, inf] = await Promise.all([
+    const [cst, adm, pr, cr, doc, ex, rdv, med, inf, ops] = await Promise.all([
       q('constantes_vitales').order('date_mesure'),
       q('administrations_medicament').order('heure_administration', { ascending: false }),
       q('prescriptions').order('created_at', { ascending: false }),
@@ -118,11 +119,12 @@ export default function Dossier() {
       q('rendez_vous').order('date_heure', { ascending: false }),
       supabase.from('medecins').select('id, nom, prenom'),
       supabase.from('infirmiers').select('id, nom, prenom'),
+      q('operations').order('debut', { ascending: false }),
     ])
     const personnes = {}
     for (const x of inf.data || []) personnes[x.id] = nomComplet(x)
     for (const x of med.data || []) personnes[x.id] = nomMedecin(x)
-    setD({ cst: cst.data || [], adm: adm.data || [], pr: pr.data || [], cr: cr.data || [], doc: doc.data || [], ex: ex.data || [], rdv: rdv.data || [], personnes })
+    setD({ cst: cst.data || [], adm: adm.data || [], pr: pr.data || [], cr: cr.data || [], doc: doc.data || [], ex: ex.data || [], rdv: rdv.data || [], ops: ops.data || [], personnes })
   }, [patientId])
   useEffect(() => { setD(null); charger() }, [charger])
 
@@ -240,6 +242,26 @@ export default function Dossier() {
               ))}</tbody>
             </table></div>
           ))}
+
+          {onglet === 'Opérations' && (
+            <>
+              <div className="rangee-btn"><Link to="/medecin/bloc/programmer" className="btn">Programmer une opération</Link></div>
+              {!d.ops.length ? <Vide>Aucune opération.</Vide> : (
+                <div className="defile-x"><table className="tableau">
+                  <thead><tr><th>Date</th><th>Intervention</th><th>Site</th><th>Statut</th><th /></tr></thead>
+                  <tbody>{d.ops.map(o => (
+                    <tr key={o.id}>
+                      <td className="mono" style={{ whiteSpace: 'nowrap' }}>{dateHeure(o.debut)}</td>
+                      <td style={{ fontWeight: 600 }}>{o.intervention}{o.cote && o.cote !== 'Sans objet' ? ` · ${o.cote.toLowerCase()}` : ''}</td>
+                      <td>{sites.nom(o.site_id)}</td>
+                      <td><BadgeOp statut={o.statut} /></td>
+                      <td><Link to={`/medecin/bloc/${o.id}`} className="btn-lien bleu">OUVRIR</Link></td>
+                    </tr>
+                  ))}</tbody>
+                </table></div>
+              )}
+            </>
+          )}
 
           {onglet === 'Rendez-vous' && (!d.rdv.length ? <Vide>Aucun rendez-vous.</Vide> : (
             <div className="defile-x"><table className="tableau">

@@ -8,6 +8,7 @@ import { supabase, journaliser, messageErreur } from '../lib/supabase.js'
 import { dateHeure, nombre, nomComplet, valeurDateHeure } from '../lib/format.js'
 import { imprimerCarnet } from '../lib/carnet.js'
 import { SelecteurSite } from '../lib/sites.jsx'
+import BlocPatient from '../components/BlocPatient.jsx'
 
 const VIDE = { temperature: '', pouls: '', tension_systolique: '', tension_diastolique: '', saturation: '', poids: '', notes: '' }
 const num = v => (v === '' ? null : Number(String(v).replace(',', '.')))
@@ -78,6 +79,7 @@ function Soins() {
       </SelecteurPatient>
       <Message type="succes">{msg.succes}</Message>
       <Message type="alerte">{msg.alerte}</Message>
+      {patient && <BlocPatient key={patient.id} patient={patient} />}
       {patient && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 20, alignItems: 'start' }}>
           <form onSubmit={valider} style={{ border: '1px solid var(--filet)', background: '#fff', padding: 16, display: 'grid', gap: 12 }}>
