@@ -25,6 +25,7 @@ import FileUrgences from './pages/medecin/FileUrgences.jsx'
 import Dossier from './pages/medecin/Dossier.jsx'
 import Affiches from './pages/medecin/Affiches.jsx'
 import PapiersVierges from './pages/medecin/PapiersVierges.jsx'
+import Courriers from './pages/medecin/Courriers.jsx'
 import EntreeSortie from './pages/medecin/EntreeSortie.jsx'
 import Bracelets from './pages/medecin/Bracelets.jsx'
 import Scanner from './pages/medecin/Scanner.jsx'
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="dossier" element={<Dossier />} />
         <Route path="affiches" element={<Affiches />} />
         <Route path="papiers" element={<PapiersVierges />} />
+        <Route path="courriers" element={<Courriers />} />
         <Route path="entree-sortie" element={<EntreeSortie />} />
         <Route path="nouveau-patient" element={<NouveauPatient />} />
         <Route path="admissions" element={<Admissions />} />
