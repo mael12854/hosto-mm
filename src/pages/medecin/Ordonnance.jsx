@@ -84,7 +84,7 @@ export default function Ordonnance() {
       const contenu = ['Ordonnance', '', ...ord.map(ligneTexte), ...(pieces.length ? ['', 'Pièces jointes :', ...pieces.map(p => '• ' + p.nom)] : [])].join('\n')
       const { error } = await supabase.from('prescriptions').insert({
         patient_id: patient.id, service_id: patient.service_id, medecin_id: profil.userId,
-        hospitalisation_id: patient.sejour?.id || null, contenu,
+        hospitalisation_id: patient.sejour?.id || null, contenu, site_id: sites.dePatient(patient)?.id || null,
         lignes: ord.map(r => ({ nom: r[0], dci: r[1], classe: r[2], forme: r[3], posologie: poso[cle(r)] || '', duree: duree[cle(r)] || '' })),
         pieces_jointes: pieces,
       })
@@ -105,6 +105,18 @@ export default function Ordonnance() {
       titre: 'Ordonnance', page: 'A5',
       corps: enteteHtml({ titre: 'Ordonnance', date: aujourdhui(), medecin, service: patient?.service, patient: patient?.nomComplet, site: sites.dePatient(patient) })
         + `<ol>${lignes}</ol>${pieces}` + piedHtml('Document officiel — Hôpital M&M', `${patient?.numero_dossier || ''}`),
+    })
+  }
+
+  /** Réimprime une ordonnance enregistrée, avec l'en-tête de son site et sa date. */
+  const reimprimer = h => {
+    const lignes = (h.lignes || []).length
+      ? h.lignes.map(l => `<li><b>${esc(l.nom)}</b>${l.forme ? ` — ${esc(l.forme)}` : ''}<br><span>${esc(l.posologie || '')}${l.duree ? ' · pendant ' + esc(l.duree) : ''}</span></li>`).join('')
+      : (h.contenu || '').split('\n').slice(1).filter(Boolean).map(t => `<li>${esc(t)}</li>`).join('')
+    imprimer({
+      titre: 'Ordonnance', page: 'A5',
+      corps: enteteHtml({ titre: 'Ordonnance', date: date(h.created_at), medecin, service: patient?.service, patient: patient?.nomComplet, site: sites.parId(h.site_id) || sites.dePatient(patient) })
+        + `<ol>${lignes}</ol>` + piedHtml('Document officiel — Hôpital M&M', `${patient?.numero_dossier || ''}`),
     })
   }
 
@@ -249,10 +261,11 @@ export default function Ordonnance() {
             {historique.map(h => (
               <details key={h.id} style={{ border: '1px solid var(--filet)', padding: '11px 13px' }}>
                 <summary style={{ cursor: 'pointer', fontSize: 14.5, color: 'var(--encre)', fontWeight: 600 }}>
-                  {(h.contenu || '').split('\n')[0] || 'Ordonnance'} <span className="mono" style={{ fontSize: 11.5, color: 'var(--gris)', fontWeight: 400 }}>· {dateHeure(h.created_at)}</span>
+                  {(h.contenu || '').split('\n')[0] || 'Ordonnance'} <span className="mono" style={{ fontSize: 11.5, color: 'var(--gris)', fontWeight: 400 }}>· {dateHeure(h.created_at)}{h.site_id ? ` · ${sites.nom(h.site_id).toUpperCase()}` : ''}</span>
                 </summary>
                 <p style={{ whiteSpace: 'pre-wrap', fontSize: 14.5, color: 'var(--texte)', marginTop: 10 }}>{h.contenu}</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                  <button type="button" className="btn-lien bleu" onClick={() => reimprimer(h)}>RÉIMPRIMER</button>
                   <button type="button" className="btn-lien bleu" onClick={() => envoyer((h.contenu || '').split('\n').slice(1).join('\n').trim(), date(h.created_at))}>ENVOYER PAR EMAIL</button>
                   {(h.pieces_jointes || []).filter(p => p.chemin).map(p => (
                     <button key={p.chemin} type="button" className="btn-lien bleu" onClick={() => ouvrirPj(p)}>VOIR {p.nom.toUpperCase()}</button>
