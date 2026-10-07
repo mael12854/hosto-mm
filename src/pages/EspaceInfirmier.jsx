@@ -5,10 +5,11 @@ import { BadgeSejour, Champ, ChampDate, Message, SelecteurPatient, Vide } from '
 import { useAuth } from '../lib/auth.jsx'
 import { PatientsProvider, usePatients } from '../lib/patients.jsx'
 import { supabase, journaliser, messageErreur } from '../lib/supabase.js'
-import { dateHeure, nombre, nomComplet, valeurDateHeure } from '../lib/format.js'
+import { dateHeure, nombre, nomComplet, nomMedecin, valeurDateHeure } from '../lib/format.js'
 import { imprimerCarnet } from '../lib/carnet.js'
 import { SelecteurSite } from '../lib/sites.jsx'
 import BlocPatient from '../components/BlocPatient.jsx'
+import ChoixDossierPatient from '../components/ChoixDossierPatient.jsx'
 
 const VIDE = { temperature: '', pouls: '', tension_systolique: '', tension_diastolique: '', saturation: '', poids: '', notes: '' }
 const num = v => (v === '' ? null : Number(String(v).replace(',', '.')))
@@ -74,6 +75,7 @@ function Soins() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <BadgeSejour sejour={patient.sejour} />
             <button type="button" className="btn" onClick={() => imprimerCarnet(patient)}>Imprimer le carnet de santé</button>
+            <ChoixDossierPatient key={patient.id} patient={patient} medecin={profil.medecin ? nomMedecin(profil.medecin) : ''} />
           </div>
         )}
       </SelecteurPatient>

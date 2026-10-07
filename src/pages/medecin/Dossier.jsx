@@ -9,6 +9,7 @@ import { usePatients } from '../../lib/patients.jsx'
 import { useSites } from '../../lib/sites.jsx'
 import { filiereDe, libelleFiliere } from '../../lib/urgences.js'
 import { BadgeOp } from '../../components/Operation.jsx'
+import ChoixDossierPatient from '../../components/ChoixDossierPatient.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { date, dateHeure, nomComplet, nomMedecin } from '../../lib/format.js'
 
@@ -155,6 +156,7 @@ export default function Dossier() {
           </div>
         </article>
       )}
+      {patient && <div className="rangee-btn"><ChoixDossierPatient key={patient.id} patient={patient} medecin={nomMedecin(profil.medecin)} /></div>}
 
       <div role="tablist" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {ONGLETS.map(o => <button key={o} type="button" role="tab" aria-selected={o === onglet} className={'btn-puce' + (o === onglet ? ' actif' : '')} onClick={() => setOnglet(o)}>{o}</button>)}

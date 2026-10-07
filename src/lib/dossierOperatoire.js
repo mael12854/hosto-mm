@@ -415,7 +415,7 @@ const CORPS = {
       ${champ('Incision', c.heures.incision ? esc(dateHeure(c.heures.incision)) : '')}${champ('Fin', c.heures.fin_intervention ? esc(dateHeure(c.heures.fin_intervention)) : '')}${champ('Côté', esc(c.cote))}
     </div>
     ${(() => {
-      const bloc = ([cle, lib, nb]) => `<div class="case"><div class="k">${esc(lib)}</div>${c.ch[cle] ? `<div class="v" style="white-space:pre-wrap">${esc(c.ch[cle])}</div>` : `<div class="lignes">${'<div></div>'.repeat(nb > 2 ? nb - 1 : nb)}</div>`}</div>`
+      const bloc = ([cle, lib, nb]) => `<div class="case"><div class="k">${esc(lib)}</div>${c.ch[cle] ? `<div class="v" style="white-space:pre-wrap">${esc(c.ch[cle])}</div>` : `<div class="lignes">${'<div></div>'.repeat(nb > 2 ? nb - 1 : nb === 2 ? 2 : 1)}</div>`}</div>`
       const courts = CHAMPS_CR.filter(x => x[2] === 1), longs = CHAMPS_CR.filter(x => x[2] > 1)
       return longs.slice(0, 4).map(bloc).join('') + `<div class="grille deux">${courts.map(bloc).join('')}</div>` + longs.slice(4).map(bloc).join('')
     })()}
