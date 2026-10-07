@@ -85,7 +85,7 @@ export const estMineur = (naissance, le = new Date()) => { const a = age(naissan
 /** Contexte commun à toutes les pièces. */
 const FICHE_VIERGE = { description: '', apres: [], alerte: [], reprise: { ecole: '', sport: '' }, controle: '', sejour: '', anesthesie: '' }
 
-function contexte({ op, patient: p, site, salle, chirurgien, mineur, vierge }) {
+function contexte({ op, patient: p, site, salle, chirurgien, mineur, vierge, ordonnance }) {
   const f = vierge ? FICHE_VIERGE : ficheIntervention(op.code_intervention)
   const sejour = op.sejour || f.sejour
   return {
@@ -95,7 +95,7 @@ function contexte({ op, patient: p, site, salle, chirurgien, mineur, vierge }) {
     cote: vierge ? '……………' : op.cote && op.cote !== 'Sans objet' ? op.cote : 'Sans objet',
     anesthesie: op.anesthesie || f.anesthesie,
     j: op.debut ? horairesJeun(op.debut) : { arrivee: null, solides: null, laitMaternel: null, liquides: null },
-    heures: op.heures || {}, ch: op.compte_rendu || {}, vierge: !!vierge,
+    heures: op.heures || {}, ch: op.compte_rendu || {}, vierge: !!vierge, ordonnance: ordonnance || [],
     adresse: [p.adresse, p.complement_adresse, [p.code_postal, p.ville].filter(Boolean).join(' ')].filter(Boolean).join(', '),
     representant: vierge ? 'Patient ou représentant légal' : mineur ? 'Représentant légal' : 'Patient',
   }
@@ -478,8 +478,10 @@ const CORPS = {
     <div class="sigs">${signature('Médecin autorisant la sortie', c.op.anesthesiste || c.chirurgien)}${signature('Infirmier(e)')}</div>`,
 
   sortie: c => `
-    <h2>Prescriptions</h2>
-    <table class="vide"><thead><tr><th>Médicament</th><th>Dose</th><th>Voie</th><th>Horaires</th><th>Durée</th></tr></thead><tbody>${vides(5, 5)}</tbody></table>
+    <h2>Prescriptions${c.ordonnance.length ? ' (ordonnance post-opératoire)' : ''}</h2>
+    ${c.ordonnance.length
+      ? `<table class="serre"><thead><tr><th>Médicament ou soin</th><th>Posologie</th><th>Durée</th></tr></thead><tbody>${c.ordonnance.slice(0, 7).map(l => `<tr><td><strong>${esc(l.nom)}</strong></td><td>${esc(l.posologie || '')}</td><td>${esc(l.duree || '')}</td></tr>`).join('')}</tbody></table>`
+      : `<table class="vide"><thead><tr><th>Médicament</th><th>Dose</th><th>Voie</th><th>Horaires</th><th>Durée</th></tr></thead><tbody>${vides(5, 5)}</tbody></table>`}
     <div class="grille">${champ('Pansement')}${champ('Ablation des fils')}${champ('Rendez-vous de contrôle', esc(c.f.controle))}</div>
     ${!c.ambu ? `<div class="grille">${champ('Date de sortie')}${champ('Mode de sortie', `${boite(false)} domicile  ${boite(false)} transfert`)}${champ('Transport', `${boite(false)} personnel  ${boite(false)} VSL / ambulance`)}</div>` : ''}
     ${champ('Consignes de sortie', esc(c.op.consignes_sortie || ''), 'white-space:pre-wrap;min-height:12mm')}

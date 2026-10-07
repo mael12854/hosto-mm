@@ -10,6 +10,7 @@ import { imprimerLivret } from '../lib/livret.js'
 import { ficheIntervention, horairesJeun } from '../lib/interventions.js'
 import { statutOp } from '../lib/operations.js'
 import ChoixDossierPatient from '../components/ChoixDossierPatient.jsx'
+import { imprimerCrOperatoire, imprimerOrdoPostop } from '../lib/documentsOperation.js'
 import { date, dateCourte, dateHeure, heure, nomMedecin } from '../lib/format.js'
 
 function Bloc({ titre, children }) {
@@ -20,6 +21,7 @@ export default function EspacePatient() {
   const { profil } = useAuth()
   const p = profil.patient
   const sites = useSites()
+  const moi = { ...p, nomComplet: `${p.prenom || ''} ${p.nom || ''}`.trim(), service: p.services?.nom || '' }
   const [d, setD] = useState(null)
 
   useEffect(() => {
@@ -32,7 +34,13 @@ export default function EspacePatient() {
       q('examens_laboratoire').eq('statut', 'disponible').order('date_resultat', { ascending: false }),
       supabase.from('medecins').select('id, nom, prenom'),
       supabase.rpc('mes_operations'),
-    ]).then(([cr, pr, doc, rdv, ex, med, ops]) => setD({ cr: cr.data || [], pr: pr.data || [], doc: doc.data || [], rdv: rdv.data || [], ex: ex.data || [], med: med.data || [], ops: ops.data || [] }))
+      supabase.rpc('mes_comptes_rendus_operatoires'),
+    ]).then(([cr, pr, doc, rdv, ex, med, ops, crop]) => {
+      // Comptes-rendus opératoires signés, rattachés à leur opération.
+      const crs = Object.fromEntries((crop.data || []).map(x => [x.operation_id, x]))
+      const liste = (ops.data || []).map(o => (crs[o.id] ? { ...o, compte_rendu: crs[o.id].compte_rendu, compte_rendu_signe_le: crs[o.id].compte_rendu_signe_le } : o))
+      setD({ cr: cr.data || [], pr: pr.data || [], doc: doc.data || [], rdv: rdv.data || [], ex: ex.data || [], med: med.data || [], ops: liste })
+    })
   }, [p.id])
 
   const medecin = id => nomMedecin(d?.med.find(m => m.id === id))
@@ -105,7 +113,13 @@ export default function EspacePatient() {
                         </div>
                       )}
                       {o.consignes_sortie && <div><div className="etiquette">Consignes de sortie</div><p style={{ fontSize: 14.5, color: 'var(--texte)', whiteSpace: 'pre-wrap' }}>{o.consignes_sortie}</p></div>}
-                      <button type="button" className="btn" style={{ justifySelf: 'start' }} onClick={() => imprimerLivret({ op: o, patient: { ...p, service: p.services?.nom }, site, chirurgien: o.chirurgien })}>Imprimer mon livret « Mon opération »</button>
+                      <div className="rangee-btn">
+                        <button type="button" className="btn" onClick={() => imprimerLivret({ op: o, patient: { ...p, service: p.services?.nom }, site, chirurgien: o.chirurgien })}>Mon livret « Mon opération »</button>
+                        {o.compte_rendu_signe_le && <button type="button" className="btn" onClick={() => imprimerCrOperatoire({ op: o, patient: moi, site, chirurgien: o.chirurgien })}>Compte-rendu opératoire</button>}
+                        {d.pr.filter(x => x.operation_id === o.id).slice(0, 1).map(x => (
+                          <button key={x.id} type="button" className="btn" onClick={() => imprimerOrdoPostop({ op: o, lignes: x.lignes || [], patient: moi, site, medecin: medecin(x.medecin_id) || o.chirurgien, le: x.created_at })}>Ordonnance post-opératoire</button>
+                        ))}
+                      </div>
                     </div>
                   )
                 })}

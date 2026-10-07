@@ -195,3 +195,45 @@ export function horairesJeun(debut, avanceArriveeMin = 90) {
   const moins = h => new Date(arrivee.getTime() - h * 3600000)
   return { arrivee, solides: moins(6), laitMaternel: moins(4), liquides: moins(2) }
 }
+
+/** Médicaments et soins propres à chaque intervention, ajoutés aux antalgiques de base. */
+const POSTOP = {
+  amygdalectomie: [{ nom: 'Bains de bouche ou pastilles adaptées à l\'âge', posologie: 'Après les repas, si besoin', duree: '10 jours' }],
+  vegetations: [{ nom: 'Sérum physiologique (dosettes)', posologie: 'Lavage de nez 4 à 6 fois par jour', duree: '7 jours' }],
+  aerateurs: [{ nom: 'Gouttes auriculaires antibiotiques', posologie: 'Seulement en cas d\'écoulement : 5 gouttes matin et soir dans l\'oreille concernée', duree: '7 jours' }, { nom: 'Bouchons d\'oreilles', posologie: 'Pour le bain et la piscine', duree: 'Jusqu\'au contrôle' }],
+  ablation_att: [{ nom: 'Bouchons d\'oreilles', posologie: 'Protéger l\'oreille de l\'eau', duree: 'Jusqu\'au contrôle' }],
+  hernie_inguinale: [{ nom: 'Soins infirmiers', posologie: 'Surveillance de la cicatrice, pansement sec', duree: '7 jours' }],
+  posthectomie: [{ nom: 'Vaseline ou crème cicatrisante', posologie: 'À chaque change ou après chaque pipi', duree: '10 jours' }],
+  orchidopexie: [{ nom: 'Soins infirmiers', posologie: 'Surveillance de la cicatrice, pansement sec', duree: '7 jours' }],
+  fracture_reduction: [{ nom: 'Écharpe ou surélévation du membre', posologie: 'En permanence les 48 premières heures', duree: '48 heures' }],
+  osteosynthese: [{ nom: 'Soins infirmiers à domicile', posologie: 'Réfection du pansement tous les 2 jours', duree: '15 jours' }, { nom: 'Vessie de glace', posologie: '20 minutes, 3 à 4 fois par jour, dans un linge', duree: '7 jours' }],
+  ablation_materiel: [{ nom: 'Soins infirmiers', posologie: 'Pansement sec, ablation des fils', duree: '10 à 14 jours' }],
+  arthroscopie_genou: [{ nom: 'Vessie de glace', posologie: '20 minutes, 3 à 4 fois par jour, dans un linge', duree: '10 jours' }, { nom: 'Kinésithérapie', posologie: 'Rééducation du genou, 2 à 3 séances par semaine', duree: '10 séances' }, { nom: 'Cannes anglaises (béquilles)', posologie: 'Appui selon les consignes', duree: 'Selon l\'avis du chirurgien' }],
+  dents_sagesse: [{ nom: 'Bain de bouche antiseptique', posologie: 'À partir du lendemain, 3 fois par jour après les repas', duree: '7 jours' }, { nom: 'Vessie de glace', posologie: 'Sur les joues, 20 minutes plusieurs fois par jour', duree: '3 jours' }],
+  suture_plaie: [{ nom: 'Soins infirmiers', posologie: 'Réfection du pansement tous les 2 jours, ablation des fils', duree: 'Selon la localisation (J5 à J14)' }],
+  appendicectomie: [{ nom: 'Soins infirmiers', posologie: 'Surveillance des cicatrices, pansement sec', duree: '7 jours' }],
+  cholecystectomie: [{ nom: 'Soins infirmiers', posologie: 'Surveillance des cicatrices, pansement sec', duree: '7 jours' }],
+}
+// Pas d'anti-inflammatoire proposé après une chirurgie où il augmente le risque de saignement.
+const SANS_AINS = new Set(['amygdalectomie', 'vegetations'])
+
+/**
+ * Ordonnance post-opératoire type, à vérifier et adapter par le prescripteur.
+ * age en années ; poids en kg (doses enfant calculées si connu).
+ */
+export function ordonnancePostop(code, { age, poids } = {}) {
+  const enfant = age != null && age < 15
+  const kg = Number(String(poids || '').replace(',', '.')) || null
+  const dose = mgKg => (kg ? `${Math.round(mgKg * kg)} mg (${mgKg} mg/kg)` : `${mgKg} mg/kg`)
+  const lignes = [{
+    nom: enfant ? 'Paracétamol (suspension buvable ou sachet)' : 'Paracétamol 1 g',
+    posologie: enfant ? `${dose(15)} toutes les 6 heures, sans dépasser 60 mg/kg par jour` : '1 comprimé toutes les 6 heures, sans dépasser 4 g par jour',
+    duree: '5 jours',
+  }]
+  if (!SANS_AINS.has(code)) lignes.push({
+    nom: enfant ? 'Ibuprofène (suspension buvable)' : 'Ibuprofène 400 mg',
+    posologie: enfant ? `${dose(10)} toutes les 8 heures, au cours du repas, si la douleur persiste` : '1 comprimé toutes les 8 heures, au cours du repas, si la douleur persiste',
+    duree: '3 jours',
+  })
+  return [...lignes, ...(POSTOP[code] || [])]
+}

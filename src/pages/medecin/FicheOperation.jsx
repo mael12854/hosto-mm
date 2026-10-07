@@ -7,15 +7,16 @@ import { useBloc } from '../../lib/bloc.jsx'
 import { usePatients } from '../../lib/patients.jsx'
 import { useSites } from '../../lib/sites.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
-import { aujourdhui, date, dateHeure, esc, heure, nomComplet, nomMedecin } from '../../lib/format.js'
-import { CHAMPS_CR, STATUTS, tempsComplet } from '../../lib/operations.js'
+import { dateHeure, heure, nomComplet, nomMedecin } from '../../lib/format.js'
+import { STATUTS, tempsComplet } from '../../lib/operations.js'
 import { ANESTHESIES, SEJOURS } from '../../lib/interventions.js'
-import { enteteHtml, imprimer, piedHtml } from '../../lib/impression.js'
 import { imprimerLivret } from '../../lib/livret.js'
 import { estMineur } from '../../lib/dossierOperatoire.js'
 import ChoixDossierOp from '../../components/ChoixDossierOp.jsx'
+import OrdoPostop from '../../components/OrdoPostop.jsx'
+import { imprimerCrOperatoire } from '../../lib/documentsOperation.js'
 
-const ONGLETS = ['Préparation', 'Check-list', 'Au bloc', 'Compte-rendu', 'Réveil']
+const ONGLETS = ['Préparation', 'Check-list', 'Au bloc', 'Compte-rendu', 'Réveil', 'Ordonnance']
 
 function Preparation({ op, enregistrer }) {
   const [f, setF] = useState(op)
@@ -71,6 +72,12 @@ export default function FicheOperation() {
   const [erreur, setErreur] = useState('')
   const [onglet, setOnglet] = useState('Préparation')
   const [msg, setMsg] = useState({})
+  const [ordo, setOrdo] = useState([])
+
+  // Dernière ordonnance post-opératoire : reprise dans la page de sortie du dossier opératoire.
+  const chargerOrdo = useCallback(() => supabase.from('prescriptions').select('lignes').eq('operation_id', id).order('created_at', { ascending: false }).limit(1)
+    .then(({ data }) => setOrdo(data?.[0]?.lignes || [])), [id])
+  useEffect(() => { chargerOrdo() }, [chargerOrdo])
 
   const charger = useCallback(async () => {
     const { data, error } = await supabase.from('operations').select('*').eq('id', id).maybeSingle()
@@ -95,14 +102,8 @@ export default function FicheOperation() {
   if (!op || !patient) return <><EnTeteOutil titre="Opération" /><Chargement /></>
 
   const site = sites.parId(op.site_id), salle = bloc.salle(op.salle_id), chirurgien = bloc.chirurgien(op.chirurgien_id)
-  const donnees = { op, patient, site, salle, chirurgien, mineur: estMineur(patient.date_naissance, op.debut) }
-  const imprimerCr = f => imprimer({
-    titre: `Compte-rendu opératoire — ${patient.nomComplet}`,
-    corps: enteteHtml({ titre: 'Compte-rendu opératoire', date: date(op.debut), medecin: chirurgien, service: patient.service, patient: patient.nomComplet, site })
-      + `<p class="pat"><span>INTERVENTION</span>${esc(op.intervention)}${op.cote && op.cote !== 'Sans objet' ? ` · côté ${esc(op.cote.toLowerCase())}` : ''} · ${esc(op.anesthesie || '')}</p>`
-      + CHAMPS_CR.filter(([k]) => f[k]).map(([k, l]) => `<div class="k">${esc(l)}</div><div class="v">${esc(f[k])}</div>`).join('')
-      + piedHtml(`Signé ${op.compte_rendu_signe_le ? `le ${dateHeure(op.compte_rendu_signe_le)}` : '— non signé'}`, `Hôpital M&M · ${aujourdhui()}`),
-  })
+  const donnees = { op, patient, site, salle, chirurgien, mineur: estMineur(patient.date_naissance, op.debut), ordonnance: ordo }
+  const imprimerCr = f => imprimerCrOperatoire({ op, cr: f, patient, site, chirurgien })
 
   return (
     <>
@@ -131,7 +132,7 @@ export default function FicheOperation() {
 
       <div className="rangee-btn">
         <button type="button" className="btn" onClick={() => imprimerLivret(donnees)}>Livret « Mon opération »</button>
-        <ChoixDossierOp key={op.id + op.sejour + op.anesthesie} donnees={donnees} />
+        <ChoixDossierOp key={op.id + op.sejour + op.anesthesie + ordo.length} donnees={donnees} />
         <Link to="/medecin/bloc" className="btn-lien bleu" style={{ alignSelf: 'center' }}>← BLOC DU JOUR</Link>
       </div>
       <Message type="succes">{msg.succes}</Message>
@@ -146,6 +147,7 @@ export default function FicheOperation() {
         {onglet === 'Au bloc' && <Horaires op={op} enregistrer={enregistrer} />}
         {onglet === 'Compte-rendu' && <CompteRenduOp op={op} enregistrer={enregistrer} imprimerCr={imprimerCr} />}
         {onglet === 'Réveil' && <Reveil op={op} enregistrer={enregistrer} />}
+        {onglet === 'Ordonnance' && <OrdoPostop op={op} patient={patient} site={site} medecin={chirurgien || nomMedecin(profil.medecin)} profil={profil} onEnregistre={chargerOrdo} />}
       </div>
     </>
   )

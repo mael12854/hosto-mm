@@ -7,6 +7,10 @@ import { adresseSite, siteDe } from './sites.jsx'
 import { logoSvgTexte } from '../components/Logo.jsx'
 import { imprimer } from './impression.js'
 import { FILIERES, filiereDe, libelleFiliere } from './urgences.js'
+import { CHAMPS_CR } from './operations.js'
+
+/** Compte-rendu opératoire rempli (au moins un champ). */
+const crRempli = o => !!o.compte_rendu && Object.values(o.compte_rendu).some(v => String(v || '').trim())
 import { boite, champ, coches, dossierOperatoireHtml, estMineur, fait, signature } from './dossierOperatoire.js'
 import { PAPIERS, STYLE_PAPIERS } from './papeterie.js'
 
@@ -48,8 +52,12 @@ export async function chargerDossierComplet(patient, espace = 'personnel') {
     supabase.from('infirmiers').select('id, nom, prenom'),
     lui ? Promise.resolve({ data: [] }) : supabase.from('salles_operation').select('*'),
     q('hospitalisations').order('date_entree', { ascending: false }),
+    lui ? supabase.rpc('mes_comptes_rendus_operatoires') : Promise.resolve({ data: [] }),
   ])
-  const [cst, adm, pr, cr, doc, ex, rdv, ops, mes, vac, med, inf, salles, sejours] = r.map(x => x.data || [])
+  const [cst, adm, pr, cr, doc, ex, rdv, opsBruts, mes, vac, med, inf, salles, sejours, crop] = r.map(x => x.data || [])
+  // Espace patient : comptes-rendus opératoires signés rattachés à leur opération.
+  const crs = Object.fromEntries(crop.map(x => [x.operation_id, x]))
+  const ops = opsBruts.map(o => (crs[o.id] ? { ...o, compte_rendu: crs[o.id].compte_rendu, compte_rendu_signe_le: crs[o.id].compte_rendu_signe_le } : o))
   const personnes = {}
   for (const x of inf) personnes[x.id] = nomComplet(x)
   for (const x of med) personnes[x.id] = nomMedecin(x)
@@ -89,6 +97,8 @@ const PIECES = [
   ['examens', 'Examens', 'Dossier', c => c.d.ex.length > 0, 'Examens enregistrés', true],
   ['rendez_vous', 'Rendez-vous', 'Dossier', c => c.d.rdv.length > 0, 'Rendez-vous enregistrés', true],
   ['operations', 'Opérations', 'Dossier', c => c.d.ops.length > 0, 'Opérations enregistrées', true],
+  ['cr_operatoires', 'Comptes-rendus opératoires', 'Dossier', c => c.d.ops.some(crRempli), 'Comptes-rendus opératoires rédigés', true],
+  ['ordo_postop', 'Ordonnances post-opératoires', 'Dossier', c => c.d.pr.some(x => x.operation_id), 'Ordonnances après une opération', true],
   ['carnet', 'Carnet de santé : croissance et vaccins', 'Dossier', c => c.d.mes.length > 0 || c.d.vac.length > 0, 'Mesures ou vaccins enregistrés', true],
 
   ['triage', "Fiche de triage d'accueil (IOA)", 'Urgences', c => !!c.filiere, 'Passage aux urgences en cours'],
@@ -111,7 +121,7 @@ const PIECES = [
 
 /** Pièces disponibles, avec celles proposées pour ce patient. */
 // Pièces que le patient peut imprimer lui-même : son dossier et ses autorisations (pas les fiches de soins).
-const PIECES_PATIENT = new Set(['garde', 'identite', 'synthese', 'sejours', 'constantes', 'medicaments', 'ordonnances', 'comptes_rendus', 'bulletins', 'examens', 'rendez_vous', 'operations', 'carnet', 'soins_mineur', 'confiance', 'image'])
+const PIECES_PATIENT = new Set(['garde', 'identite', 'synthese', 'sejours', 'constantes', 'medicaments', 'ordonnances', 'comptes_rendus', 'bulletins', 'examens', 'rendez_vous', 'operations', 'cr_operatoires', 'ordo_postop', 'carnet', 'soins_mineur', 'confiance', 'image'])
 
 export function piecesDossierPatient(entree) {
   const c = contexte(entree)
@@ -228,7 +238,7 @@ const CORPS = {
   medicaments: c => `<table class="serre"><thead><tr><th>Date et heure</th><th>Médicament</th><th>Notes</th><th>Donné par</th></tr></thead><tbody>
     ${c.d.adm.map(x => `<tr><td>${esc(dateHeure(x.heure_administration))}</td><td><strong>${esc(x.medicament)}</strong></td><td>${esc(x.notes || '')}</td><td class="petit">${esc(c.qui(x.administre_par))} ${esc(x.role_administrant || '')}</td></tr>`).join('')}</tbody></table>`,
 
-  ordonnances: c => c.d.pr.map(x => `<div class="bloc"><div class="t">Ordonnance du ${esc(date(x.created_at))}</div><div class="m">${esc([c.qui(x.medecin_id), c.sites.nom(x.site_id)].filter(Boolean).join(' · '))}</div>
+  ordonnances: c => c.d.pr.map(x => `<div class="bloc"><div class="t">Ordonnance${x.operation_id ? ' post-opératoire' : ''} du ${esc(date(x.created_at))}</div><div class="m">${esc([c.qui(x.medecin_id), c.sites.nom(x.site_id)].filter(Boolean).join(' · '))}</div>
     ${(x.lignes || []).length ? `<ol style="margin:0;padding-left:5mm">${x.lignes.map(l => `<li><strong>${esc(l.nom)}</strong>${l.forme ? ` — ${esc(l.forme)}` : ''}${l.posologie ? `<br><span class="petit">${esc(l.posologie)}${l.duree ? ` · pendant ${esc(l.duree)}` : ''}</span>` : ''}</li>`).join('')}</ol>` : `<div class="pre">${esc((x.contenu || '').split('\n').slice(1).join('\n').trim())}</div>`}</div>`).join(''),
 
   comptes_rendus: c => c.d.cr.map(x => { const [titre, ...reste] = (x.contenu || '').split('\n')
@@ -246,6 +256,14 @@ const CORPS = {
   operations: c => c.d.ops.map(o => `<div class="bloc"><div class="t">${esc(o.intervention)}${o.cote && o.cote !== 'Sans objet' ? ` · côté ${esc(o.cote.toLowerCase())}` : ''}</div>
     <div class="m">${esc(dateHeure(o.debut))} · ${esc(c.sites.nom(o.site_id))} · ${esc(o.statut.toUpperCase())} · ${esc(o.chirurgien || c.qui(o.chirurgien_id))} · ${esc(o.anesthesie || '')} · ${esc(o.sejour || '')}</div>
     ${o.compte_rendu?.geste ? `<div><span class="k">Geste réalisé</span><div class="pre">${esc(o.compte_rendu.geste)}</div></div>` : ''}${o.consignes_sortie ? `<div><span class="k">Consignes de sortie</span><div class="pre">${esc(o.consignes_sortie)}</div></div>` : ''}</div>`).join(''),
+
+  cr_operatoires: c => c.d.ops.filter(crRempli).map(o => `<div class="bloc"><div class="t">${esc(o.intervention)}${o.cote && o.cote !== 'Sans objet' ? ` · côté ${esc(o.cote.toLowerCase())}` : ''}</div>
+    <div class="m">${esc(dateHeure(o.debut))} · ${esc(c.sites.nom(o.site_id))} · ${esc(o.chirurgien || c.qui(o.chirurgien_id))} · ${esc(o.anesthesie || '')} · ${o.compte_rendu_signe_le ? `signé le ${esc(dateHeure(o.compte_rendu_signe_le))}` : 'NON SIGNÉ'}</div>
+    ${CHAMPS_CR.filter(([k]) => o.compte_rendu?.[k]).map(([k, l]) => `<div><span class="k">${esc(l)}</span><div class="pre">${esc(o.compte_rendu[k])}</div></div>`).join('')}</div>`).join(''),
+
+  ordo_postop: c => c.d.pr.filter(x => x.operation_id).map(x => { const o = c.d.ops.find(y => y.id === x.operation_id)
+    return `<div class="bloc"><div class="t">Ordonnance post-opératoire du ${esc(date(x.created_at))}</div><div class="m">${esc(o ? `Après : ${o.intervention} du ${date(o.debut)}` : '')} · ${esc(c.qui(x.medecin_id))}</div>
+    <ol style="margin:0;padding-left:5mm">${(x.lignes || []).map(l => `<li><strong>${esc(l.nom)}</strong>${l.posologie ? `<br><span class="petit">${esc(l.posologie)}${l.duree ? ` · pendant ${esc(l.duree)}` : ''}</span>` : ''}</li>`).join('')}</ol></div>` }).join(''),
 
   carnet: c => `<h2>Croissance</h2>${c.d.mes.length ? `<table class="serre"><thead><tr><th>Date</th><th>Taille (cm)</th><th>Poids (kg)</th><th>Périmètre crânien</th></tr></thead><tbody>${c.d.mes.map(m => `<tr><td>${esc(date(m.date_mesure))}</td><td>${nb(m.taille_cm)}</td><td>${nb(m.poids_kg)}</td><td>${nb(m.perimetre_cranien_cm)}</td></tr>`).join('')}</tbody></table>` : rien('Aucune mesure.')}
     <h2>Vaccinations</h2>${c.d.vac.length ? `<table class="serre"><thead><tr><th>Date</th><th>Vaccin</th><th>Dose</th><th>Lot</th></tr></thead><tbody>${c.d.vac.map(v => `<tr><td>${esc(date(v.date_vaccination))}</td><td>${esc(v.vaccin)}</td><td>${esc(v.dose || '')}</td><td>${esc(v.lot || '')}</td></tr>`).join('')}</tbody></table>` : rien('Aucune vaccination enregistrée.')}`,
@@ -345,7 +363,7 @@ export function dossierPatientHtml(entree, codes) {
   return choisies.map((x, i) => {
     if (x.code === 'dossier_operatoire') {
       const o = c.opAVenir
-      return dossierOperatoireHtml({ op: o, patient: c.p, site: c.sites.parId(o.site_id), salle: c.d.salles.find(s => s.id === o.salle_id), chirurgien: c.qui(o.chirurgien_id), mineur: estMineur(c.p.date_naissance, o.debut) })
+      return dossierOperatoireHtml({ op: o, patient: c.p, site: c.sites.parId(o.site_id), salle: c.d.salles.find(s => s.id === o.salle_id), chirurgien: c.qui(o.chirurgien_id), mineur: estMineur(c.p.date_naissance, o.debut), ordonnance: c.d.pr.find(x => x.operation_id === o.id)?.lignes })
     }
     if (['surveillance', 'transmissions', 'administration'].includes(x.code)) return `<section class="page" data-piece="${x.code}">${papiers[x.code](c.site, c.p)}</section>`
     return `<section class="page${flux.has(x.code) ? ' flux' : ''}" data-piece="${x.code}">${entete(x.titre)}${CORPS[x.code](c, titres)}${pied(i)}</section>`
