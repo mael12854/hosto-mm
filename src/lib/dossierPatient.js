@@ -26,9 +26,13 @@ ${lignes.map(l => `<tr><td>${l}</td>${cols.map(() => `<td class="c">${boite(fals
 const rien = t => `<p class="vide-txt">${t}</p>`
 const nb = v => (v == null || v === '' ? '' : String(v).replace('.', ','))
 
-/** Charge tout le dossier du patient (lecture selon les droits du personnel connecté). */
-export async function chargerDossierComplet(patient) {
+/**
+ * Charge tout le dossier du patient, selon les droits de la personne connectée.
+ * espace = 'patient' : le patient lui-même (opérations par mes_operations, sans compte-rendu ni check-list).
+ */
+export async function chargerDossierComplet(patient, espace = 'personnel') {
   const q = t => supabase.from(t).select('*').eq('patient_id', patient.id)
+  const lui = espace === 'patient'
   const r = await Promise.all([
     q('constantes_vitales').order('date_mesure', { ascending: false }),
     q('administrations_medicament').order('heure_administration', { ascending: false }),
@@ -37,29 +41,32 @@ export async function chargerDossierComplet(patient) {
     q('documents_officiels').order('created_at', { ascending: false }),
     q('examens_laboratoire').order('date_demande', { ascending: false }),
     q('rendez_vous').order('date_heure', { ascending: false }),
-    q('operations').order('debut', { ascending: false }),
+    lui ? supabase.rpc('mes_operations') : q('operations').order('debut', { ascending: false }),
     q('mesures_croissance').order('date_mesure', { ascending: false }),
     q('vaccinations').order('date_vaccination', { ascending: false }),
     supabase.from('medecins').select('id, nom, prenom'),
     supabase.from('infirmiers').select('id, nom, prenom'),
-    supabase.from('salles_operation').select('*'),
+    lui ? Promise.resolve({ data: [] }) : supabase.from('salles_operation').select('*'),
+    q('hospitalisations').order('date_entree', { ascending: false }),
   ])
-  const [cst, adm, pr, cr, doc, ex, rdv, ops, mes, vac, med, inf, salles] = r.map(x => x.data || [])
+  const [cst, adm, pr, cr, doc, ex, rdv, ops, mes, vac, med, inf, salles, sejours] = r.map(x => x.data || [])
   const personnes = {}
   for (const x of inf) personnes[x.id] = nomComplet(x)
   for (const x of med) personnes[x.id] = nomMedecin(x)
-  return { cst, adm, pr, cr, doc, ex, rdv, ops, mes, vac, personnes, salles }
+  return { cst, adm, pr, cr, doc, ex, rdv, ops, mes, vac, personnes, salles, sejours, espace }
 }
 
 /** Contexte : patient, données, situation (urgences, hospitalisé, mineur…). */
-function contexte({ patient: p, donnees: d, sites, medecin }) {
+function contexte({ patient: brut, donnees: d, sites, medecin }) {
+  // Séjours : ceux chargés avec le dossier si le patient n'en apporte pas (espace patient).
+  const p = brut.sejours ? brut : { ...brut, sejours: d.sejours || [], sejour: (d.sejours || [])[0] || null }
   const enCours = p.sejour && statut(p.sejour).cle !== 'sorti' ? p.sejour : null
   const filiere = enCours ? filiereDe(enCours, p.service) : null
   const maintenant = new Date()
   const opAVenir = [...d.ops].reverse().find(o => !['terminée', 'annulée'].includes(o.statut) && new Date(o.fin) > new Date(maintenant.getTime() - 24 * 3600e3))
   const site = sites.parId(enCours?.site_id) || sites.parId(opAVenir?.site_id) || sites.parDefaut
   return {
-    p, d, sites, site, medecin, enCours, filiere, opAVenir,
+    p, d, sites, site, medecin, enCours, filiere, opAVenir, espacePatient: d.espace === 'patient',
     mineur: estMineur(p.date_naissance),
     age: p.date_naissance ? Math.floor((maintenant - new Date(p.date_naissance + 'T12:00:00')) / 3.15576e10) : null,
     allergie: !!p.allergies?.trim() && !/^aucune/i.test(p.allergies.trim()),
@@ -103,12 +110,16 @@ const PIECES = [
 ]
 
 /** Pièces disponibles, avec celles proposées pour ce patient. */
+// Pièces que le patient peut imprimer lui-même : son dossier et ses autorisations (pas les fiches de soins).
+const PIECES_PATIENT = new Set(['garde', 'identite', 'synthese', 'sejours', 'constantes', 'medicaments', 'ordonnances', 'comptes_rendus', 'bulletins', 'examens', 'rendez_vous', 'operations', 'carnet', 'soins_mineur', 'confiance', 'image'])
+
 export function piecesDossierPatient(entree) {
   const c = contexte(entree)
+  const liste = c.espacePatient ? PIECES.filter(x => PIECES_PATIENT.has(x[0])) : PIECES
   return {
     situation: [c.filiere ? `${c.filiere === 'generale' ? 'Urgences · à trier' : libelleFiliere(c.filiere)}` : c.enCours ? `Hospitalisé · ${c.p.service}` : 'Pas de séjour en cours', c.mineur ? 'mineur' : 'majeur', c.opAVenir ? 'opération prévue' : ''].filter(Boolean).join(' · '),
-    pieces: PIECES.map(([code, titre, groupe, quand, raison]) => ({
-      code, groupe, raison, defaut: !!quand(c),
+    pieces: liste.map(([code, titre, groupe, quand, raison]) => ({
+      code, groupe, raison, defaut: c.espacePatient && ['soins_mineur', 'confiance', 'image'].includes(code) ? false : !!quand(c),
       titre: code === 'filiere' && c.filiere ? (c.filiere === 'generale' ? "Fiche d'orientation (Urgences, à trier)" : `Fiche · ${libelleFiliere(c.filiere)}`) : titre,
     })),
   }
@@ -182,7 +193,7 @@ function ficheFiliere(c) {
 // ——— Corps de chaque pièce ———
 const CORPS = {
   garde: (c, titres) => `
-    <div class="encadre"><strong style="font-size:15pt">${esc(c.nom)}</strong><br>${esc(c.p.service || '')} · ${esc(c.site ? siteDe(c.site.nom) : '')}<br><span class="petit">Dossier édité le ${esc(new Date().toLocaleDateString('fr-FR'))} par ${esc(c.medecin || '……')}</span></div>
+    <div class="encadre"><strong style="font-size:15pt">${esc(c.nom)}</strong><br>${esc(c.p.service || '')} · ${esc(c.site ? siteDe(c.site.nom) : '')}<br><span class="petit">Dossier édité le ${esc(new Date().toLocaleDateString('fr-FR'))} ${c.espacePatient ? 'depuis « Mon Hôpital M&amp;M »' : `par ${esc(c.medecin || '……')}`}</span></div>
     <div class="grille">${champ('Situation', esc(c.filiere ? (c.filiere === 'generale' ? 'Urgences · à trier' : libelleFiliere(c.filiere)) : c.enCours ? 'Hospitalisé' : 'Pas de séjour en cours'))}${champ('Âge', c.age != null ? `${c.age} ans${c.mineur ? ' · mineur' : ''}` : '')}${champ('Groupe sanguin', esc(c.p.groupe_sanguin || ''))}</div>
     ${c.allergie ? `<div class="alerte"><div class="k">Allergies</div><div class="v">${esc(c.p.allergies)}</div></div>` : ''}
     <h2>Sommaire</h2>
@@ -233,7 +244,7 @@ const CORPS = {
     ${c.d.rdv.map(r => `<tr><td>${esc(dateHeure(r.date_heure))}</td><td>${esc(c.sites.nom(r.site_id))}</td><td>${esc(r.motif || 'Consultation')}</td><td>${esc(r.statut)}</td></tr>`).join('')}</tbody></table>`,
 
   operations: c => c.d.ops.map(o => `<div class="bloc"><div class="t">${esc(o.intervention)}${o.cote && o.cote !== 'Sans objet' ? ` · côté ${esc(o.cote.toLowerCase())}` : ''}</div>
-    <div class="m">${esc(dateHeure(o.debut))} · ${esc(c.sites.nom(o.site_id))} · ${esc(o.statut.toUpperCase())} · ${esc(c.qui(o.chirurgien_id))} · ${esc(o.anesthesie || '')} · ${esc(o.sejour || '')}</div>
+    <div class="m">${esc(dateHeure(o.debut))} · ${esc(c.sites.nom(o.site_id))} · ${esc(o.statut.toUpperCase())} · ${esc(o.chirurgien || c.qui(o.chirurgien_id))} · ${esc(o.anesthesie || '')} · ${esc(o.sejour || '')}</div>
     ${o.compte_rendu?.geste ? `<div><span class="k">Geste réalisé</span><div class="pre">${esc(o.compte_rendu.geste)}</div></div>` : ''}${o.consignes_sortie ? `<div><span class="k">Consignes de sortie</span><div class="pre">${esc(o.consignes_sortie)}</div></div>` : ''}</div>`).join(''),
 
   carnet: c => `<h2>Croissance</h2>${c.d.mes.length ? `<table class="serre"><thead><tr><th>Date</th><th>Taille (cm)</th><th>Poids (kg)</th><th>Périmètre crânien</th></tr></thead><tbody>${c.d.mes.map(m => `<tr><td>${esc(date(m.date_mesure))}</td><td>${nb(m.taille_cm)}</td><td>${nb(m.poids_kg)}</td><td>${nb(m.perimetre_cranien_cm)}</td></tr>`).join('')}</tbody></table>` : rien('Aucune mesure.')}

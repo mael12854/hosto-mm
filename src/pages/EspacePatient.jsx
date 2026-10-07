@@ -9,6 +9,7 @@ import { adresseSite, siteDe, useSites } from '../lib/sites.jsx'
 import { imprimerLivret } from '../lib/livret.js'
 import { ficheIntervention, horairesJeun } from '../lib/interventions.js'
 import { statutOp } from '../lib/operations.js'
+import ChoixDossierPatient from '../components/ChoixDossierPatient.jsx'
 import { date, dateCourte, dateHeure, heure, nomMedecin } from '../lib/format.js'
 
 function Bloc({ titre, children }) {
@@ -121,6 +122,12 @@ export default function EspacePatient() {
                   <p style={{ fontSize: 14.5, color: 'var(--texte)', whiteSpace: 'pre-wrap' }}>{x.resultat}</p>
                 </div>
               ))}
+            </Bloc>
+
+            <Bloc titre="Mon dossier complet">
+              <div className="rangee-btn">
+                <ChoixDossierPatient espace="patient" patient={{ ...p, nomComplet: `${p.prenom || ''} ${p.nom || ''}`.trim(), service: p.services?.nom || '' }} />
+              </div>
             </Bloc>
 
             <Bloc titre="Mon carnet de santé">

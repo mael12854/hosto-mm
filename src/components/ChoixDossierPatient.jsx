@@ -6,7 +6,7 @@ import { chargerDossierComplet, imprimerDossierPatient, piecesDossierPatient } f
 const GROUPES = [['Dossier', 'Contenu du dossier'], ['Urgences', 'Urgences'], ['Hospitalisation', 'Hospitalisation'], ['Autorisations', 'Autorisations et alertes'], ['Bloc', 'Bloc opératoire']]
 
 /** Bouton « Dossier complet » : charge tout le dossier, propose les pièces adaptées au patient, imprime. */
-export default function ChoixDossierPatient({ patient, medecin }) {
+export default function ChoixDossierPatient({ patient, medecin = '', espace = 'personnel' }) {
   const sites = useSites()
   const [etat, setEtat] = useState(null) // null : fermé · 'chargement' · { donnees, pieces, situation }
   const [choix, setChoix] = useState([])
@@ -15,12 +15,12 @@ export default function ChoixDossierPatient({ patient, medecin }) {
   const ouvrir = async () => {
     setEtat('chargement'); setErreur('')
     try {
-      const donnees = await chargerDossierComplet(patient)
+      const donnees = await chargerDossierComplet(patient, espace)
       const { pieces, situation } = piecesDossierPatient({ patient, donnees, sites, medecin })
       setEtat({ donnees, pieces, situation }); setChoix(pieces.filter(x => x.defaut).map(x => x.code))
     } catch (e) { setErreur(e.message); setEtat(null) }
   }
-  if (!etat) return <><button type="button" className="btn" onClick={ouvrir}>Dossier complet à imprimer</button><Message type="alerte">{erreur}</Message></>
+  if (!etat) return <><button type="button" className="btn" onClick={ouvrir}>{espace === 'patient' ? 'Imprimer mon dossier complet' : 'Dossier complet à imprimer'}</button><Message type="alerte">{erreur}</Message></>
   if (etat === 'chargement') return <Chargement texte="Préparation du dossier…" />
 
   const { donnees, pieces, situation } = etat
@@ -29,10 +29,10 @@ export default function ChoixDossierPatient({ patient, medecin }) {
   return (
     <div className="carte-blanche" style={{ display: 'grid', gap: 14, flexBasis: '100%', borderTop: '3px solid var(--bleu)' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--encre)' }}>Dossier de {patient.nomComplet} · {choix.length} pièce{choix.length > 1 ? 's' : ''}</span>
+        <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--encre)' }}>{espace === 'patient' ? 'Mon dossier' : `Dossier de ${patient.nomComplet}`} · {choix.length} pièce{choix.length > 1 ? 's' : ''}</span>
         <span className="etiquette">{situation}</span>
       </div>
-      <p style={{ fontSize: 14, color: 'var(--texte)' }}>Les pièces cochées sont proposées pour ce patient : tout ce qui est enregistré dans son dossier, et les formulaires adaptés à sa situation, identité pré-remplie.</p>
+      <p style={{ fontSize: 14, color: 'var(--texte)' }}>{espace === 'patient' ? 'Tout ce qui est enregistré dans votre dossier, prêt à imprimer ou à enregistrer en PDF. Les autorisations (personne de confiance, soins d\'un mineur, droit à l\'image) peuvent être ajoutées pour les remplir et les rapporter signées.' : 'Les pièces cochées sont proposées pour ce patient : tout ce qui est enregistré dans son dossier, et les formulaires adaptés à sa situation, identité pré-remplie.'}</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: 16, alignItems: 'start' }}>
         {groupes.map(([g, titre]) => (
           <div key={g} style={{ display: 'grid', gap: 2 }}>
