@@ -4,6 +4,7 @@ import { usePatients } from '../../lib/patients.jsx'
 import { supabase } from '../../lib/supabase.js'
 import { statut } from '../../lib/format.js'
 import { useSites } from '../../lib/sites.jsx'
+import { FILIERES } from '../../lib/urgences.js'
 
 function Tuile({ k, v, t }) {
   return (
@@ -73,6 +74,7 @@ export default function Statistiques() {
         {parSite('Hospitalisés en ce moment, par site', enCours.map(p => p.sejour))}
         {parSite('Rendez-vous par site', rdv)}
         {parSite('Opérations par site', ops)}
+        {sejours.some(x => x.filiere_urgence) && <Barres titre="Passages aux urgences par domaine" donnees={FILIERES.map(([k, l]) => [k === 'generale' ? 'Urgences (à trier)' : l.replace(/^Urgences /, ''), sejours.filter(x => x.filiere_urgence === k).length]).filter(x => x[1] > 0)} />}
         {ops.length > 0 && <Barres titre="Interventions les plus fréquentes" donnees={Object.entries(ops.reduce((a, o) => ({ ...a, [o.intervention]: (a[o.intervention] || 0) + 1 }), {})).sort((a, b) => b[1] - a[1]).slice(0, 8)} />}
       </div>
     </>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Chargement, EnTeteOutil, Message, Vide } from '../../components/ui.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { usePatients } from '../../lib/patients.jsx'
+import { FILIERES, courtFiliere, filiereDe, filiereSuggeree, libelleFiliere } from '../../lib/urgences.js'
 import { siteDe, useSites } from '../../lib/sites.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { heure, statut } from '../../lib/format.js'
@@ -29,6 +30,7 @@ export default function FileUrgences() {
   const sites = useSites()
   const [maintenant, setMaintenant] = useState(() => Date.now())
   const [msg, setMsg] = useState({})
+  const [domaine, setDomaine] = useState('tous')
 
   // L'attente se met à jour toutes les 30 s ; la liste est relue chaque minute.
   useEffect(() => {
@@ -40,7 +42,11 @@ export default function FileUrgences() {
   // Arrivés il y a plus de 24 h et jamais passés « vu » : séjours longs, hors de la file.
   const presentsTous = patients.filter(p => p.sejour && statut(p.sejour).cle !== 'sorti' && (!sites.actif || p.sejour.site_id === sites.actif))
   const anciens = presentsTous.filter(p => (p.sejour.statut_triage || 'en_attente') === 'en_attente' && maintenant - new Date(p.sejour.date_entree) > 24 * 3600000)
-  const presents = presentsTous.filter(p => !anciens.includes(p))
+  const dansFile = presentsTous.filter(p => !anciens.includes(p))
+  const filiere = p => filiereDe(p.sejour, p.service)
+  // Filtre par domaine d'urgence : « hors » = séjours d'autres services.
+  const compte = code => dansFile.filter(p => (code === 'hors' ? !filiere(p) : filiere(p) === code)).length
+  const presents = domaine === 'tous' ? dansFile : dansFile.filter(p => (domaine === 'hors' ? !filiere(p) : filiere(p) === domaine))
   const niveau = p => p.sejour.niveau_urgence || 5
   const attente = p => Math.max(0, Math.round((maintenant - new Date(p.sejour.date_entree)) / 60000))
   const trier = liste => [...liste].sort((a, b) => niveau(a) - niveau(b) || new Date(a.sejour.date_entree) - new Date(b.sejour.date_entree))
@@ -76,6 +82,17 @@ export default function FileUrgences() {
         ))}
       </div>
 
+      <div role="tablist" aria-label="Domaines d'urgence" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {[['tous', 'Tous'], ...FILIERES.map(([k]) => [k, k === 'generale' ? 'Urgences · à trier' : courtFiliere(k)]), ['hors', 'Autres services']]
+          .map(([k, l]) => [k, l, k === 'tous' ? dansFile.length : compte(k)])
+          .filter(([k, , n]) => n > 0 || ['tous', 'generale'].includes(k) || k === domaine)
+          .map(([k, l, n]) => (
+            <button key={k} type="button" role="tab" aria-selected={domaine === k} className={'btn-puce' + (domaine === k ? ' actif' : '')} onClick={() => setDomaine(k)}>
+              {l} · {n}
+            </button>
+          ))}
+      </div>
+
       {chargement ? <Chargement /> : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 16, alignItems: 'start' }}>
           {COLONNES.map(([cle, titre, couleur]) => {
@@ -88,6 +105,7 @@ export default function FileUrgences() {
                 </div>
                 {!items.length ? <Vide>Personne.</Vide> : items.map((p, rang) => {
                   const n = niveau(p), min = attente(p), depasse = cle === 'en_attente' && min > CIBLE[n]
+                  const f = filiere(p), conseil = f === 'generale' ? filiereSuggeree(p, p.sejour.motif) : null
                   return (
                     <article key={p.id} className="carte-blanche" style={{ padding: 14, display: 'grid', gap: 8, borderLeft: `4px solid ${COULEUR[n]}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
@@ -99,6 +117,12 @@ export default function FileUrgences() {
                         </div>
                         <span className="badge" style={{ background: COULEUR[n] }}>P{n}</span>
                       </div>
+                      {f && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                          <span className={'statut-texte ' + (f === 'generale' ? 'surveiller' : 'stable')}>{f === 'generale' ? 'URGENCES · À TRIER' : libelleFiliere(f).toUpperCase()}</span>
+                          {conseil && <button type="button" className="btn-lien bleu" onClick={() => modifier(p, { filiere_urgence: conseil }, `Orienté vers ${libelleFiliere(conseil)}`)}>→ {courtFiliere(conseil).toUpperCase()}</button>}
+                        </div>
+                      )}
                       <div className="mono" style={{ fontSize: 12, color: depasse ? 'var(--rouge)' : 'var(--gris)', fontWeight: depasse ? 500 : 400 }}>
                         ARRIVÉE {heure(p.sejour.date_entree)} · {cle === 'vu' ? 'VU' : `ATTENTE ${duree(min).toUpperCase()}`}{depasse ? ' · DÉLAI DÉPASSÉ' : ''} · {p.service.toUpperCase()}{!sites.actif && p.sejour.site_id ? ` · ${sites.nom(p.sejour.site_id).toUpperCase()}` : ''}
                       </div>
@@ -108,6 +132,12 @@ export default function FileUrgences() {
                           <button type="button" className="btn" onClick={() => modifier(p, { statut_triage: 'vu' }, 'Patient vu')}>Patient vu</button>
                           <button type="button" className="btn-lien bleu" onClick={() => modifier(p, { statut_triage: 'en_attente' }, 'Remis en attente')}>REMETTRE EN ATTENTE</button>
                         </>}
+                        {f && cle !== 'vu' && (
+                          <select className="saisie petite" style={{ width: 'auto' }} value={f} aria-label={`Domaine d'urgence de ${p.nomComplet}`}
+                            onChange={e => modifier(p, { filiere_urgence: e.target.value }, e.target.value === 'generale' ? 'Remis à trier' : `Orienté vers ${libelleFiliere(e.target.value)}`)}>
+                            {FILIERES.map(([k]) => <option key={k} value={k}>{k === 'generale' ? 'À trier' : courtFiliere(k)}{k === conseil ? ' (suggéré)' : ''}</option>)}
+                          </select>
+                        )}
                         {cle !== 'vu' && (
                           <select className="saisie petite" style={{ width: 'auto' }} value={n} aria-label={`Triage de ${p.nomComplet}`}
                             onChange={e => modifier(p, { niveau_urgence: Number(e.target.value) }, `Triage P${e.target.value}`)}>

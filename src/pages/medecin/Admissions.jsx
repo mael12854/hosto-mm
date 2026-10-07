@@ -4,6 +4,7 @@ import { BadgeSejour, Champ, ChampDate, EnTeteOutil, Message, Saisie, Vide } fro
 import { useAuth } from '../../lib/auth.jsx'
 import { creerDossier, usePatients } from '../../lib/patients.jsx'
 import { useSites } from '../../lib/sites.jsx'
+import { FILIERES, filiereSuggeree, libelleFiliere } from '../../lib/urgences.js'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { dateHeure, statut, valeurDateHeure } from '../../lib/format.js'
 
@@ -25,7 +26,7 @@ function Entrer({ services, lits, onFait }) {
   const [mode, setMode] = useState('existant')
   const [patientId, setPatientId] = useState('')
   const [nouveau, setNouveau] = useState(NOUVEAU)
-  const [sejour, setSejour] = useState({ date_entree: valeurDateHeure(), service_id: '', site_id: '', motif: '', niveau_urgence: 4, lit_id: '' })
+  const [sejour, setSejour] = useState({ date_entree: valeurDateHeure(), service_id: '', site_id: '', motif: '', niveau_urgence: 4, lit_id: '', filiere: 'generale' })
   const [msg, setMsg] = useState({})
   const [envoi, setEnvoi] = useState(false)
   const majN = k => v => setNouveau(x => ({ ...x, [k]: v }))
@@ -37,6 +38,8 @@ function Entrer({ services, lits, onFait }) {
   const serviceId = sejour.service_id || choisi?.service_id || (services.find(s => s.nom === 'Urgences') || services[0])?.id || ''
   const siteId = sejour.site_id || sites.parDefaut?.id || ''
   const litsLibres = lits.filter(l => l.service_id === serviceId && l.site_id === siteId && !l.patient_id)
+  const urgences = services.find(s => s.id === serviceId)?.nom === 'Urgences'
+  const suggestion = urgences && filiereSuggeree(mode === 'nouveau' ? nouveau : choisi, sejour.motif)
 
   const faireEntrer = async e => {
     e.preventDefault()
@@ -63,14 +66,15 @@ function Entrer({ services, lits, onFait }) {
       const { error } = await supabase.from('hospitalisations').insert({
         patient_id: patient.id, service_id: serviceId, site_id: siteId, medecin_id: profil.userId,
         date_entree: entree.toISOString(), motif: sejour.motif.trim() || null, niveau_urgence: Number(sejour.niveau_urgence),
+        filiere_urgence: urgences ? sejour.filiere : null,
       })
       if (error) throw error
       const lit = litsLibres.find(l => l.id === sejour.lit_id)
       if (lit) await supabase.from('lits').update({ patient_id: patient.id }).eq('id', lit.id)
       const nom = `${patient.prenom} ${patient.nom}`
-      journaliser(profil, `Entrée à ${sites.nom(siteId)} : ${nom} (triage P${sejour.niveau_urgence})${lit ? `, lit ${lit.identifiant}` : ''}`, { patient_id: patient.id, service_id: serviceId })
+      journaliser(profil, `Entrée à ${sites.nom(siteId)} : ${nom} (triage P${sejour.niveau_urgence}${urgences ? `, ${libelleFiliere(sejour.filiere)}` : ''})${lit ? `, lit ${lit.identifiant}` : ''}`, { patient_id: patient.id, service_id: serviceId })
       setMsg({ succes: `${nom} est ${accord('entré', patient.sexe)} à ${sites.nom(siteId)} le ${dateHeure(entree)}${mode === 'nouveau' ? ` — dossier ${patient.numero_dossier}` : ''}${lit ? `, lit ${lit.identifiant}` : ''}.` })
-      setPatientId(''); setNouveau(NOUVEAU); setSejour(x => ({ date_entree: valeurDateHeure(), service_id: '', site_id: x.site_id, motif: '', niveau_urgence: 4, lit_id: '' }))
+      setPatientId(''); setNouveau(NOUVEAU); setSejour(x => ({ date_entree: valeurDateHeure(), service_id: '', site_id: x.site_id, motif: '', niveau_urgence: 4, lit_id: '', filiere: 'generale' }))
       onFait()
     } catch (err) {
       setMsg({ alerte: messageErreur(err) })
@@ -135,6 +139,20 @@ function Entrer({ services, lits, onFait }) {
         </Champ>
       </div>
       <Saisie label="Motif d'entrée" placeholder="Chute à vélo, fièvre, douleur au ventre…" valeur={sejour.motif} onChange={majS('motif')} />
+      {urgences && (
+        <div className="grille-champs">
+          <Champ label="Domaine d'urgence">
+            <select className="saisie" value={sejour.filiere} onChange={e => majS('filiere')(e.target.value)}>
+              {FILIERES.map(([k, l, aide]) => <option key={k} value={k}>{k === 'generale' ? `${l} — à trier` : l}{k === suggestion ? ' (suggéré)' : ''}{k === 'generale' ? '' : ` · ${aide}`}</option>)}
+            </select>
+          </Champ>
+          {suggestion && sejour.filiere !== suggestion && (
+            <button type="button" className="btn-lien bleu" style={{ alignSelf: 'center', justifySelf: 'start' }} onClick={() => majS('filiere')(suggestion)}>
+              ORIENTER DIRECTEMENT : {libelleFiliere(suggestion).toUpperCase()}
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="rangee-btn">
         <button type="submit" className="btn btn-plein" disabled={envoi || !services.length}>{envoi ? 'Enregistrement…' : 'Faire entrer'}</button>

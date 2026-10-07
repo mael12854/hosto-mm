@@ -4,6 +4,7 @@ import { BadgeSejour, Chargement, EnTeteOutil, Vide } from '../../components/ui.
 import { useAuth } from '../../lib/auth.jsx'
 import { usePatients } from '../../lib/patients.jsx'
 import { useSites } from '../../lib/sites.jsx'
+import { courtFiliere, filiereDe } from '../../lib/urgences.js'
 import { supabase, journaliser } from '../../lib/supabase.js'
 import { dateHeure, heure, nombre, statut } from '../../lib/format.js'
 
@@ -18,7 +19,7 @@ export function CartePatient({ p, constante, action }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 19, fontWeight: 600, color: 'var(--encre)' }}>{p.nomComplet}</div>
-          <div className="mono" style={{ fontSize: 12, color: 'var(--gris)' }}>{p.numero_dossier || p.ipp} · Service {p.service}{site ? ' · ' + site : ''}{p.num_chambre ? ' · ' + p.num_chambre : ''}</div>
+          <div className="mono" style={{ fontSize: 12, color: 'var(--gris)' }}>{p.numero_dossier || p.ipp} · Service {p.service}{site ? ' · ' + site : ''}{s.cle !== 'sorti' && filiereDe(p.sejour, p.service) ? ' · ' + (filiereDe(p.sejour, p.service) === 'generale' ? 'À trier' : courtFiliere(filiereDe(p.sejour, p.service))) : ''}{p.num_chambre ? ' · ' + p.num_chambre : ''}</div>
         </div>
         <BadgeSejour sejour={p.sejour} />
       </div>

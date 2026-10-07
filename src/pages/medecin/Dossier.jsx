@@ -7,6 +7,7 @@ import { BadgeSejour, Chargement, EnTeteOutil, Message, SelecteurPatient, Vide }
 import { useAuth } from '../../lib/auth.jsx'
 import { usePatients } from '../../lib/patients.jsx'
 import { useSites } from '../../lib/sites.jsx'
+import { filiereDe, libelleFiliere } from '../../lib/urgences.js'
 import { BadgeOp } from '../../components/Operation.jsx'
 import { supabase, journaliser, messageErreur } from '../../lib/supabase.js'
 import { date, dateHeure, nomComplet, nomMedecin } from '../../lib/format.js'
@@ -140,7 +141,7 @@ export default function Dossier() {
           <div style={{ display: 'grid', gap: 4 }}>
             <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--encre)' }}>{patient.nomComplet}</div>
             <div className="mono" style={{ fontSize: 12, color: 'var(--gris)' }}>
-              DOSSIER {patient.numero_dossier} · IPP {patient.ipp || '—'} · {patient.service.toUpperCase()}{patient.sejour && !patient.sejour.date_sortie && sites.nom(patient.sejour.site_id) ? ` · ${sites.nom(patient.sejour.site_id).toUpperCase()}` : ''}{patient.num_chambre ? ` · ${patient.num_chambre.toUpperCase()}` : ''}
+              DOSSIER {patient.numero_dossier} · IPP {patient.ipp || '—'} · {patient.service.toUpperCase()}{patient.sejour && !patient.sejour.date_sortie && sites.nom(patient.sejour.site_id) ? ` · ${sites.nom(patient.sejour.site_id).toUpperCase()}` : ''}{patient.sejour && !patient.sejour.date_sortie && filiereDe(patient.sejour, patient.service) ? ` · ${(filiereDe(patient.sejour, patient.service) === 'generale' ? 'URGENCES · À TRIER' : libelleFiliere(filiereDe(patient.sejour, patient.service)).toUpperCase())}` : ''}{patient.num_chambre ? ` · ${patient.num_chambre.toUpperCase()}` : ''}
             </div>
             <div style={{ fontSize: 14.5, color: 'var(--texte)' }}>
               {patient.date_naissance ? `Né(e) le ${date(patient.date_naissance)}` : 'Date de naissance inconnue'}
@@ -175,7 +176,7 @@ export default function Dossier() {
                 <div className="defile-x"><table className="tableau">
                   <thead><tr><th>Entrée</th><th>Sortie</th><th>Site</th><th>Triage</th><th>Motif</th></tr></thead>
                   <tbody>{patient.sejours.map(s => (
-                    <tr key={s.id}><td className="mono">{dateHeure(s.date_entree)}</td><td className="mono">{s.date_sortie ? dateHeure(s.date_sortie) : 'En cours'}</td><td>{sites.nom(s.site_id) || '—'}</td><td className="mono">{s.niveau_urgence ? `P${s.niveau_urgence}` : '—'}</td><td>{s.motif || '—'}</td></tr>
+                    <tr key={s.id}><td className="mono">{dateHeure(s.date_entree)}</td><td className="mono">{s.date_sortie ? dateHeure(s.date_sortie) : 'En cours'}</td><td>{sites.nom(s.site_id) || '—'}</td><td className="mono">{s.niveau_urgence ? `P${s.niveau_urgence}` : '—'}</td><td>{s.motif || '—'}{s.filiere_urgence ? <span className="etiquette" style={{ display: 'block' }}>{libelleFiliere(s.filiere_urgence)}</span> : null}</td></tr>
                   ))}</tbody>
                 </table></div>
               )}
